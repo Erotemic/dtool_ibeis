@@ -7,6 +7,8 @@
     - Need to update:
         - depc.new_algo_request
         - AlgoRequest.execute
+    - Careful, the descendant rowids of annot for vs one are [(1, 1), (2, 2), ...]
+      this is because there is no way to say what daids you want to compare against
 
 * Allow for custom external write functions to be specified.
 
