@@ -17,3 +17,10 @@
     - requires config namespaces
 
 * Allow annotation of implicit edges.
+
+
+* Need to remove algorithm request structure completely from the dependency
+  cache. Algorithms should be specified strictuly with configs and the 
+  configs should know how to address the storage of long configuration 
+  options like the daid list for vsmany.
+
