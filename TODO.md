@@ -27,3 +27,6 @@
 
 * root\_uuids should be specified as the base\_root\_uuid plus a hash of the
   attributes that matter for the requested computation.
+
+* Need to standardize and keep track of places where we use row-wise or
+  column-wise indicies.
