@@ -24,3 +24,6 @@
   configs should know how to address the storage of long configuration 
   options like the daid list for vsmany.
 
+
+* root\_uuids should be specified as the base\_root\_uuid plus a hash of the
+  attributes that matter for the requested computation.
