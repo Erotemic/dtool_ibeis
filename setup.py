@@ -16,6 +16,11 @@ INSTALL_REQUIRES = [
 
 CLUTTER_PATTERNS = [
     # Patterns removed by python setup.py clean
+    '*.prof',
+    '*.lprof',
+    'clean_profile.txt',
+    'raw_profile.txt',
+    'DEPCACHE',
 ]
 
 if __name__ == '__main__':
