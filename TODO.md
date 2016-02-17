@@ -30,3 +30,6 @@
 
 * Need to standardize and keep track of places where we use row-wise or
   column-wise indicies.
+
+
+* Need to add support for precomputed models
