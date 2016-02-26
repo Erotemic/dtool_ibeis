@@ -33,3 +33,13 @@
 
 
 * Need to add support for precomputed models
+
+
+* REQUIRED: get config property of child computation
+* REQUIRED: different configs for items in n-wise edges
+* REQUIRED: handle gets of any table that has an ancestors with a multi-edge
+
+
+* FIXME: duplicate rowids
+
+REQUIRED: Request objects should be able to handle nodes at any depth
