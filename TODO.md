@@ -10,7 +10,7 @@
     - Careful, the descendant rowids of annot for vs one are [(1, 1), (2, 2), ...]
       this is because there is no way to say what daids you want to compare against
 
-* Allow for custom external write functions to be specified.
+* ~~Allow for custom external write functions to be specified.~~
 
 * Move all version flags to config objects.
     - involves allowing differnt configs to have the same value
@@ -34,12 +34,13 @@
 
 * Need to add support for precomputed models
 
-
 * REQUIRED: get config property of child computation
 * REQUIRED: different configs for items in n-wise edges
 * REQUIRED: handle gets of any table that has an ancestors with a multi-edge
 
-
 * FIXME: duplicate rowids
 
 REQUIRED: Request objects should be able to handle nodes at any depth
+
+
+* Add rootmost-input rowids to data tables for quick access.
