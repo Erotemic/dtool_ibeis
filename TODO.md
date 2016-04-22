@@ -44,3 +44,6 @@ REQUIRED: Request objects should be able to handle nodes at any depth
 
 
 * Add rootmost-input rowids to data tables for quick access.
+
+* Override ancestor default configuration value when defining a table.
+- Force parameter to be static.
