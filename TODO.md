@@ -47,3 +47,17 @@ REQUIRED: Request objects should be able to handle nodes at any depth
 
 * Override ancestor default configuration value when defining a table.
 - Force parameter to be static.
+
+
+* Make lazy computable columns that can be manually overwritten.
+Motivating example:
+we want to access image orientation from the image EXIF data.
+We don't want to read it all when images are added.
+Solution, make image orientation a depcache property of images.
+Then allow for that property to be manually overwritten.
+Challenges involve how do you deal with precedence and whatnot.
+Maybe you don't.
+Maybe you have a manual property that defaults to a computed property.
+Then you either request the manual or the computed version.
+
+ 
