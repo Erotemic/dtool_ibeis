@@ -55,5 +55,5 @@ failed.txt
 _doc
 test_times.txt
 failed_doctests.txt
-DEPCACHE/
+DEPCACHE*/
 tmp.txt
