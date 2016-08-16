@@ -57,3 +57,4 @@ _doc
 failed_doctests.txt
 DEPCACHE*/
 tmp.txt
+test_times.txt
