@@ -2,14 +2,14 @@
 https://www.uppmax.uu.se/automating-workflows-using-the-luigi-batch-workflow-system
 
 
-Perceived differences between dtool and luigi:
+Perceived differences between dtool_ibeis and luigi:
 
-    - dtool allows for a configurations to be inherited by child properties, in
+    - dtool_ibeis allows for a configurations to be inherited by child properties, in
       luigi it seems like these must be spelled out in the requires method. In the case where
       these params change, you would need to modify the entire heirarchy or requires heirarchy
-      that you get for free with dtool.
+      that you get for free with dtool_ibeis.
 
-    - dtool is built around the idea of a core object and computing properties
+    - dtool_ibeis is built around the idea of a core object and computing properties
       of that object.
     It then assumes that you have many instances of that object, so it
       computes the same property in batch when executing tasks that involve more
@@ -23,11 +23,11 @@ Perceived differences between dtool and luigi:
       on the fly as necessary).
 
 
-    - A luigi task does subsampleing, in dtool we assume you have already sampled the correct
+    - A luigi task does subsampleing, in dtool_ibeis we assume you have already sampled the correct
     input and are passing that along into the model.
 
     - luigi outputs each run task to its own file. In contrast it seems like a
-    dtool table is the similar analogy to a task, but all runs of a task are
+    dtool_ibeis table is the similar analogy to a task, but all runs of a task are
     stored in the same file (by default).
 
     - I think you should be able to replace task functions with luigi run functions.
@@ -43,7 +43,7 @@ Perceived differences between dtool and luigi:
 
 Ideas:
 
-    If we could define a luigi.Task for every table we might be able to implement the backend of dtool in luigi.
+    If we could define a luigi.Task for every table we might be able to implement the backend of dtool_ibeis in luigi.
     We could handle the configuration inheritence for luigi.
     We would be the benefit of luigi's scheduler.
     Would not have to work with luigi's input / output.
