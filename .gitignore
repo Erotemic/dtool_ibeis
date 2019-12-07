@@ -25,6 +25,7 @@ pip-log.txt
 logs
 
 # Unit test / coverage reports
+htmlcov
 .coverage
 .tox
 nosetests.xml
@@ -48,12 +49,12 @@ nosetests.xml
 *.npz
 
 # utool output
-_test_times.txt
+timeings.txt
 failed.txt
 
 *.orig
 _doc
-test_times.txt
 failed_doctests.txt
-DEPCACHE/
+DEPCACHE*/
 tmp.txt
+test_times.txt

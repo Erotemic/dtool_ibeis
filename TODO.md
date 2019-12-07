@@ -60,4 +60,5 @@ Maybe you don't.
 Maybe you have a manual property that defaults to a computed property.
 Then you either request the manual or the computed version.
 
- 
+* delete_property should be able to work for ALL configs, not just 
+  a the default config 
