@@ -1320,6 +1320,8 @@ class SQLDatabaseController(object):
         return retstr
 
     def dump_to_file(db, file_, auto_commit=True, schema_only=False, include_metadata=True):
+        """
+        """
         VERBOSE_SQL = True
         if VERBOSE_SQL:
             print('[sql.dump_to_file] file_=%r' % (file_,))
@@ -1811,7 +1813,17 @@ class SQLDatabaseController(object):
     #==============
 
     def dump_tables_to_csv(db, dump_dir=None):
-        """ Convenience: Dumps all csv database files to disk """
+        """
+        Convenience: Dumps all csv database files to disk
+
+        Ignore:
+            >>> # ENABLE_DOCTEST
+            >>> from dtool_ibeis.sql_control import *  # NOQA
+            >>> from dtool_ibeis.example_depcache import testdata_depc
+            >>> depc = testdata_depc()
+            >>> table = depc['notch']
+            >>> db = table.db
+        """
         if dump_dir is None:
             dump_dir = join(db.dir_, 'CSV_DUMP')
         ut.ensuredir(dump_dir)
@@ -2807,15 +2819,15 @@ class SQLDatabaseController(object):
             >>> rowids = depc.get_rowids('notch', [1, 2, 3])
             >>> table = depc['notch']
             >>> db = table.db
-            >>> ut.exec_funckw(db.get_table_csv, globals())
+            >>> #ut.exec_funckw(db.get_table_csv, globals())
             >>> tablename = 'notch'
+            >>> exclude_columns = []
             >>> csv_table = db.get_table_csv(tablename, exclude_columns, truncate=True)
             >>> print(csv_table)
         """
         #=None, column_list=[], header='', column_type=None
-        column_list, column_names = db.get_table_column_data(tablename,
-                                                             exclude_columns,
-                                                             rowids)
+        column_list, column_names = db.get_table_column_data(
+                tablename, exclude_columns=exclude_columns, rowids=rowids)
         # remove column prefix for more compact csvs
         column_lbls = [name.replace(tablename[:-1] + '_', '') for name in column_names]
         header = db.get_table_csv_header(tablename)
