@@ -166,6 +166,13 @@ def native_mb_python_tag(plat_impl=None, version_info=None):
     return mb_tag
 
 
+try:
+    MB_PYTHON_TAG = native_mb_python_tag()
+except Exception:
+    # raise
+    MB_PYTHON_TAG = '???'
+
+
 NAME = 'dtool_ibeis'
 VERSION = parse_version('dtool_ibeis/__init__.py')  # must be global for git tags
 
