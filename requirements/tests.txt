@@ -3,3 +3,4 @@ pytest >= 3.3.1
 pytest-cov
 coverage >= 4.3.4
 codecov >= 2.0.15
+vtool_ibeis >= 2.2.0
