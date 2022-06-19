@@ -41,7 +41,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r requirements/tests.txt
         python -m pip install -r requirements/runtime.txt
-        true
+        python -m pip install -r requirements/headless.txt
     - name: Build sdist
       run: |-
         python setup.py sdist
@@ -61,7 +61,7 @@ jobs:
         pwd
         ls -al
         python -m pip install -r requirements/optional.txt
-        true
+        python -m pip install -r requirements/headless.txt
         MOD_DPATH=$(python -c "import dtool_ibeis, os; print(os.path.dirname(dtool_ibeis.__file__))")
         echo "MOD_DPATH = $MOD_DPATH"
         WORKSPACE_DNAME="testsrcdir_${CI_PYTHON_VERSION}_${GITHUB_RUN_ID}_${RUNNER_OS}"
@@ -122,7 +122,7 @@ jobs:
       run: |-
         python -m pip install wheelhouse/dtool_ibeis*.whl
         python -m pip install -r requirements/tests.txt
-        true
+        python -m pip install -r requirements/headless.txt
         WORKSPACE_DNAME="testdir_${CI_PYTHON_VERSION}_${GITHUB_RUN_ID}_${RUNNER_OS}"
         mkdir -p $WORKSPACE_DNAME
         cd $WORKSPACE_DNAME
@@ -153,7 +153,7 @@ jobs:
         echo '############ FIND'
         find . -name .coverage.*
         find . -name coverage.xml
-    - uses: codecov/codecov-action@v1
+    - uses: codecov/codecov-action@v3
       name: Codecov Upload
       with:
         file: ./tests/coverage.xml
@@ -165,7 +165,8 @@ jobs:
   test_deploy:
     name: Uploading Test to PyPi
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (startsWith(github.event.ref, 'refs/heads/main'))
+    if: github.event_name == 'push' && ! startsWith(github.event.ref, 'refs/tags')
+      && ! startsWith(github.event.ref, 'refs/heads/release')
     needs:
     - build_and_test_wheels
     - build_and_test_sdist
@@ -203,7 +204,8 @@ jobs:
   live_deploy:
     name: Uploading Live to PyPi
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    if: github.event_name == 'push' && (startsWith(github.event.ref, 'refs/tags')
+      || startsWith(github.event.ref, 'refs/heads/release'))
     needs:
     - build_and_test_wheels
     - build_and_test_sdist
