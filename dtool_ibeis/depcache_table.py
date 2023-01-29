@@ -1689,8 +1689,8 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         data_col_attrs - keeps track of computed data
 
     Attributes:
-        db (dtool_ibeis.SQLDatabaseController): pointer to underlying database
-        depc (dtool_ibeis.DependencyCache): pointer to parent cache
+        db (dtool_ibeis.sql_control.SQLDatabaseController): pointer to underlying database
+        depc (dtool_ibeis.depcache_control.DependencyCache): pointer to parent cache
         tablename (str): name of the table
         docstr (str): documentation for table
         parent_tablenames (str): parent tables in depcache
