@@ -31,6 +31,13 @@ import re
 (print, rrr, profile) = ut.inject2(__name__, '[depcache_table]')
 
 
+__docstubs__ = """
+#import dtool_ibeis
+from typing import Union
+from dtool_ibeis.depcache_control import DependencyCache
+"""
+
+
 EXTERN_SUFFIX = '_extern_uri'
 
 CONFIG_TABLE     = 'config'
@@ -157,7 +164,7 @@ class _TableConfigHelper(object):
             rowid_list (list): native table rowids
 
         Returns:
-            parent_rowids (List[Tuple]): tuples of parent rowids
+            List[Tuple]: parent_rowids  : tuples of parent rowids
 
         Example:
             >>> # TODO: Need a test that creates a table
@@ -176,7 +183,7 @@ class _TableConfigHelper(object):
             rowid_list (list): native table rowids
 
         Returns:
-            parent_rowids (List[Tuple]): tuples of parent rowids
+            List[Tuple]: parent_rowids : tuples of parent rowids
 
         Example:
             >>> # TODO: Need a test that creates a table
@@ -1689,8 +1696,8 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         data_col_attrs - keeps track of computed data
 
     Attributes:
-        db (dtool_ibeis.sql_control.SQLDatabaseController): pointer to underlying database
-        depc (dtool_ibeis.depcache_control.DependencyCache): pointer to parent cache
+        db (SQLDatabaseController): pointer to underlying database
+        depc (DependencyCache): pointer to parent cache
         tablename (str): name of the table
         docstr (str): documentation for table
         parent_tablenames (str): parent tables in depcache

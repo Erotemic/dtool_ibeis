@@ -31,7 +31,7 @@ class StackedConfig(ut.DictLike, ut.HashComparable):
             setattr(self, key, val)
         #self.keys = ut.flatten(list(cfg.keys()) for cfg in self.config_list)
 
-    def get_cfgstr(self):
+    def get_cfgstr(self, *args, **kwargs):
         cfgstr_list = [cfg.get_cfgstr() for cfg in self._new_config_list]
         cfgstr = '_'.join(cfgstr_list)
         return cfgstr
@@ -370,7 +370,7 @@ class Config(ut.NiceRepr, ut.DictLike):
         cfgstr = ''.join([config_name, '(', body, ')'])
         return cfgstr
 
-    def get_cfgstr(cfg, **kwargs):
+    def get_cfgstr(cfg, *args, **kwargs):
         str_ = ''.join(cfg.get_cfgstr_list(**kwargs))
         return '_'.join([str_] + [cfg[subcfg_attr].get_cfgstr()
                                   for subcfg_attr in cfg._subconfig_attrs])
@@ -734,7 +734,7 @@ class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
         # TODO: uuid_hashid = ut.hashid_arr(uuid_list, label=label)
         return uuid_hashid
 
-    def get_cfgstr(request, with_input=False, with_pipe=True, **kwargs):
+    def get_cfgstr(request, with_input=False, with_pipe=True, *args, **kwargs):
         r"""
         main cfgstring used to identify the 'querytype'
         """
@@ -1006,7 +1006,7 @@ class VsManySimilarityRequest(BaseRequest, AnnotSimiliarity):
         return '_'.join([request.get_query_hashid()])
 
     def get_cfgstr(request, with_input=False, with_data=True, with_pipe=True,
-                   hash_pipe=False):
+                   hash_pipe=False, *args, **kwargs):
         r"""
         Override default get_cfgstr to show reliance on data
         """
