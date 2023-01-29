@@ -39,9 +39,6 @@ def compute_unique_data_ids(data):
     """
     This is actually faster than compute_unique_integer_data_ids it seems
 
-    CommandLine:
-        python -m vtool_ibeis.other --test-compute_unique_data_ids
-
     Example:
         >>> # ENABLE_DOCTEST
         >>> data = np.array([[0, 0], [0, 1], [1, 0], [1, 1], [0, 0], [.534, .432], [.534, .432], [1, 0], [0, 1]])

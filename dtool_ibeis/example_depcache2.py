@@ -1,8 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import utool as ut
-#import numpy as np
-from os.path import join, dirname
-from six.moves import zip
+import ubelt as ub
+import os
 
 
 def depc_34_helper(depc):
@@ -75,17 +73,14 @@ def testdata_depc3(in_memory=True):
         >>> ut.show_if_requested()
     """
     import dtool_ibeis
-
-    # put the test cache in the dtool_ibeis repo
-    dtool_repo = dirname(ut.get_module_dir(dtool_ibeis))
-    cache_dpath = join(dtool_repo, 'DEPCACHE3')
+    cache_dpath = os.fspath(ub.Path.appdir('dtool_ibeis', 'DEPCACHE3').ensuredir())
 
     # FIXME: this only puts the sql files in memory
     default_fname = ':memory:' if in_memory else None
 
     root = 'annot'
     depc = dtool_ibeis.DependencyCache(
-        root_tablename=root, get_root_uuid=ut.identity,
+        root_tablename=root, get_root_uuid=ub.identity,
         default_fname=default_fname,
         cache_dpath=cache_dpath, use_globals=False)
 
@@ -144,8 +139,7 @@ def testdata_depc4(in_memory=True):
     import dtool_ibeis
 
     # put the test cache in the dtool_ibeis repo
-    dtool_repo = dirname(ut.get_module_dir(dtool_ibeis))
-    cache_dpath = join(dtool_repo, 'DEPCACHE3')
+    cache_dpath = os.fspath(ub.Path.appdir('dtool_ibeis', 'DEPCACHE3').ensuredir())
 
     # FIXME: this only puts the sql files in memory
     default_fname = ':memory:' if in_memory else None
@@ -184,13 +178,13 @@ def testdata_depc4(in_memory=True):
 def testdata_custom_annot_depc(dummy_dependencies, in_memory=True):
     import dtool_ibeis
     # put the test cache in the dtool_ibeis repo
-    dtool_repo = dirname(ut.get_module_dir(dtool_ibeis))
-    cache_dpath = join(dtool_repo, 'DEPCACHE5')
+    cache_dpath = os.fspath(ub.Path.appdir('dtool_ibeis', 'DEPCACHE5').ensuredir())
+
     # FIXME: this only puts the sql files in memory
     default_fname = ':memory:' if in_memory else None
     root = 'annot'
     depc = dtool_ibeis.DependencyCache(
-        root_tablename=root, get_root_uuid=ut.identity,
+        root_tablename=root, get_root_uuid=ub.identity,
         default_fname=default_fname,
         cache_dpath=cache_dpath, use_globals=False)
     # ----------
