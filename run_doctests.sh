@@ -1,2 +1,2 @@
-#!/bin/bash
-xdoctest dtool_ibeis --style=google all
+#!/usr/bin/env bash
+xdoctest dtool_ibeis --style=google all "$@"

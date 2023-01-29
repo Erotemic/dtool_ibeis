@@ -6,7 +6,6 @@ import operator as op
 import utool as ut
 import numpy as np
 import copy
-import six
 (print, rrr, profile) = ut.inject2(__name__, '[depbase]')
 
 
@@ -32,7 +31,7 @@ class StackedConfig(ut.DictLike, ut.HashComparable):
             setattr(self, key, val)
         #self.keys = ut.flatten(list(cfg.keys()) for cfg in self.config_list)
 
-    def get_cfgstr(self):
+    def get_cfgstr(self, *args, **kwargs):
         cfgstr_list = [cfg.get_cfgstr() for cfg in self._new_config_list]
         cfgstr = '_'.join(cfgstr_list)
         return cfgstr
@@ -51,7 +50,6 @@ class StackedConfig(ut.DictLike, ut.HashComparable):
             raise KeyError(ex)
 
 
-# @six.add_metaclass(ut.HashComparableMetaclass)
 @functools.total_ordering
 class Config(ut.NiceRepr, ut.DictLike):
     r"""
@@ -137,7 +135,7 @@ class Config(ut.NiceRepr, ut.DictLike):
         #self_keys.append(cfg.get_varnames())
         _aliases = cfg._make_key_alias_checker()
         self_keys = set(cfg.keys())
-        for key, val in six.iteritems(kwargs):
+        for key, val in kwargs.items():
             # update only existing keys or namespace prefixed keys
             for k in _aliases(key):
                 if k in self_keys:
@@ -372,7 +370,7 @@ class Config(ut.NiceRepr, ut.DictLike):
         cfgstr = ''.join([config_name, '(', body, ')'])
         return cfgstr
 
-    def get_cfgstr(cfg, **kwargs):
+    def get_cfgstr(cfg, *args, **kwargs):
         str_ = ''.join(cfg.get_cfgstr_list(**kwargs))
         return '_'.join([str_] + [cfg[subcfg_attr].get_cfgstr()
                                   for subcfg_attr in cfg._subconfig_attrs])
@@ -465,7 +463,7 @@ class Config(ut.NiceRepr, ut.DictLike):
     def from_dict(cls, dict_, tablename=None):
         r"""
         Args:
-            dict_ (dict_):  a dictionary
+            dict_ (dict):  a dictionary
             tablename (None): (default = None)
 
         Returns:
@@ -539,7 +537,7 @@ class Config(ut.NiceRepr, ut.DictLike):
             >>> # ENABLE_DOCTEST
             >>> from dtool_ibeis.base import *  # NOQA
             >>> from dtool_ibeis.example_depcache import DummyKptsConfig
-            >>> from six.moves import cPickle as pickle
+            >>> import pickle
             >>> cfg = DummyKptsConfig()
             >>> ser = pickle.dumps(cfg)
             >>> cfg2 = pickle.loads(ser)
@@ -550,7 +548,7 @@ class Config(ut.NiceRepr, ut.DictLike):
             >>> # ENABLE_DOCTEST
             >>> from dtool_ibeis.base import *  # NOQA
             >>> from dtool_ibeis.example_depcache import DummyVsManyConfig
-            >>> from six.moves import cPickle as pickle
+            >>> import pickle
             >>> cfg = DummyVsManyConfig()
             >>> state = cfg.__getstate__()
             >>> cfg2 = DummyVsManyConfig()
@@ -736,7 +734,7 @@ class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
         # TODO: uuid_hashid = ut.hashid_arr(uuid_list, label=label)
         return uuid_hashid
 
-    def get_cfgstr(request, with_input=False, with_pipe=True, **kwargs):
+    def get_cfgstr(request, with_input=False, with_pipe=True, *args, **kwargs):
         r"""
         main cfgstring used to identify the 'querytype'
         """
@@ -1008,7 +1006,7 @@ class VsManySimilarityRequest(BaseRequest, AnnotSimiliarity):
         return '_'.join([request.get_query_hashid()])
 
     def get_cfgstr(request, with_input=False, with_data=True, with_pipe=True,
-                   hash_pipe=False):
+                   hash_pipe=False, *args, **kwargs):
         r"""
         Override default get_cfgstr to show reliance on data
         """

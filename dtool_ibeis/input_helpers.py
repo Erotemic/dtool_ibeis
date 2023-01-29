@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
 import utool as ut
+import ubelt as ub
 import numpy as np
-import six
 import networkx as nx  # NOQA
 (print, rrr, profile) = ut.inject2(__name__, '[depc_input_helpers]')
 
@@ -592,7 +590,7 @@ class TableInput(ut.NiceRepr):
             >>> assert 'indexer' not in str(inputs2), (
             >>>     '(2) unexpected indexer in %s' % (inputs2,))
         """
-        if isinstance(index, six.string_types):
+        if isinstance(index, str):
             index_list = ut.where([rmi.tablename == index
                                    for rmi in inputs.rmi_list])
             if len(index_list) == 0:
@@ -645,12 +643,12 @@ class TableInput(ut.NiceRepr):
         # Compute the order in which all noes must be evaluated
         import networkx as nx  # NOQA
         ordered_compute_nodes =  [rmi.compute_order() for rmi in inputs.rmi_list]
-        flat_node_order_ = ut.unique(ut.flatten(ordered_compute_nodes))
+        flat_node_order_ = list(ub.unique(ub.flatten(ordered_compute_nodes)))
 
         rgraph = inputs.exi_graph.reverse()
         toprank = ut.nx_topsort_rank(rgraph, flat_node_order_)
         sortx = ut.argsort(toprank)[::-1]
-        flat_compute_order = ut.take(flat_node_order_, sortx)
+        flat_compute_order = list(ub.take(flat_node_order_, sortx))
         # Inputs are pre-computed.
         for rmi in inputs.rmi_list:
             try:
@@ -688,7 +686,7 @@ class TableInput(ut.NiceRepr):
             >>> inputs = exi_inputs = table.rootmost_inputs.total_expand()
             >>> compute_rmi_edges = exi_inputs.flat_compute_rmi_edges()
             >>> input_rmis = compute_rmi_edges[-1][0]
-            >>> result = ut.repr2(input_rmis)
+            >>> result = ub.repr2(input_rmis, nl=0)
             >>> print(result)
             [chips[t, t:1, 1:1], Notch_Tips[t, t:1, 1:1]]
         """
@@ -706,7 +704,7 @@ class TableInput(ut.NiceRepr):
             # another sorting strategy. maybe this is correct.
             sortx = [exi_graph.get_edge_data(*e).get('parent_colx') for e in input_edges]
             sortx_ = np.argsort(sortx)
-            input_nodes = ut.take(input_nodes, sortx_)
+            input_nodes = list(ub.take(input_nodes, sortx_))
 
             input_rmis = [RootMostInput(node, sink, exi_graph)
                           for node in input_nodes]
@@ -814,7 +812,7 @@ def get_rootmost_inputs(exi_graph, table):
 
     Args:
         exi_graph (nx.Graph): made from make_expanded_input_graph(graph, target)
-        table (dtool_ibeis.Table):
+        table (Any): a Table
 
     CommandLine:
         python -m dtool_ibeis.input_helpers get_rootmost_inputs
@@ -832,7 +830,7 @@ def get_rootmost_inputs(exi_graph, table):
         >>> inputs = inputs_.expand_input(1)
         >>> rmi = inputs.rmi_list[0]
         >>> result = ('inputs = %s' % (inputs,)) + '\n'
-        >>> result += ('compute_edges = %s' % (ut.repr2(inputs.flat_compute_rmi_edges(), nl=1)))
+        >>> result += ('compute_edges = %s' % (ub.repr2(inputs.flat_compute_rmi_edges(), nl=1)))
         >>> print(result)
     """
     # Take out the shallowest (wrt target) rootmost nodes
@@ -853,7 +851,5 @@ if __name__ == '__main__':
         python -m dtool_ibeis.input_helpers
         python -m dtool_ibeis.input_helpers --allexamples
     """
-    import multiprocessing
-    multiprocessing.freeze_support()  # for win32
-    import utool as ut  # NOQA
-    ut.doctest_funcs()
+    import xdoctest
+    xdoctest.doctest_module(__file__)

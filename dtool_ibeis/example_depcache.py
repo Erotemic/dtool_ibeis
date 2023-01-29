@@ -236,7 +236,7 @@ def testdata_depc(fname=None):
         TODO: Infer properties from docstr?
 
         Args:
-            depc (dtool_ibeis.DependencyCache):
+            depc (Any): dtool_ibeis.DependencyCache
             annot_rowid_list (list): list of annot rowids
             config (dict): config dictionary
 

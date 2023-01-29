@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Interface into SQL for the IBEIS Controller
 
 TODO; need to use some sort of sticky bit so
 sql files are created with reasonable permissions.
 """
-#from __future__ import absolute_import, division, print_function
-from __future__ import absolute_import, division, print_function, unicode_literals
-import six
+import os
 import re
 import parse
+import ubelt as ub
 import utool as ut
 import collections
 import threading
 from functools import partial
-from six.moves import map, zip, cStringIO
+import io
 from os.path import join, exists, dirname, basename
 from dtool_ibeis import __SQLITE__ as lite  # NOQA
 print, rrr, profile = ut.inject2(__name__)
@@ -22,14 +20,14 @@ print, rrr, profile = ut.inject2(__name__)
 
 METADATA_TABLE       = 'metadata'
 
-READ_ONLY = ut.get_argflag(('--readonly-mode', '--read-only', '--readonly'))
-VERBOSE_SQL    = ut.get_argflag(('--print-sql', '--verbose-sql', '--verb-sql', '--verbsql'))
-NOT_QUIET = not (ut.QUIET or ut.get_argflag('--quiet-sql'))
+READ_ONLY = ub.argflag(('--readonly-mode', '--read-only', '--readonly'))
+VERBOSE_SQL    = ub.argflag(('--print-sql', '--verbose-sql', '--verb-sql', '--verbsql'))
+NOT_QUIET = not (ut.QUIET or ub.argflag('--quiet-sql'))
 
 VERBOSE        = ut.VERBOSE
 VERYVERBOSE    = ut.VERYVERBOSE
-COPY_TO_MEMORY = ut.get_argflag(('--copy-db-to-memory'))
-#AUTODUMP       = ut.get_argflag('--auto-dump')
+COPY_TO_MEMORY = ub.argflag(('--copy-db-to-memory'))
+#AUTODUMP       = ub.argflag('--auto-dump')
 
 TIMEOUT = 600  # Wait for up to 600 seconds for the database to return from a locked state
 
@@ -88,7 +86,7 @@ def flattenize(list_):
         1000000 loops, best of 3: 1.18 us per loop
     """
     tuplized_iter   = map(tuplize, list_)
-    flatenized_list = list(map(ut.flatten, tuplized_iter))
+    flatenized_list = [list(ub.flatten(x)) for x in tuplized_iter]
     return flatenized_list
 
 # =======================
@@ -125,7 +123,6 @@ class SQLExecutionContext(object):
 
     def __enter__(context):
         """ Checks to see if the operating will change the database """
-        #ut.printif(lambda: '[sql] Callers: ' + ut.get_caller_name(range(3, 6)), DEBUG)
         if context.nInput is not None:
             context.operation_lbl = ('[sql] execute nInput=%d optype=%s: '
                                        % (context.nInput, context.operation_type))
@@ -153,10 +150,6 @@ class SQLExecutionContext(object):
             print(context.operation_lbl)
             if context.verbose:
                 print('[sql] operation=\n' + context.operation)
-        # Comment out timeing code
-        #if __debug__:
-        #    if NOT_QUIET and (VERBOSE_SQL or context.verbose):
-        #        context.tt = ut.tic(context.operation_lbl)
         return context
 
     #@profile
@@ -180,8 +173,8 @@ class SQLExecutionContext(object):
                 try:
                     coldef_list = context.db.get_coldef_list(tablename)
                     print('ERR REPORT: expected types = %s' % (ut.repr4(coldef_list),))
-                except Exception as ex:
-                    pass
+                except Exception:
+                    ...
             raise
         return context._results_gen()
 
@@ -298,15 +291,11 @@ def dev_test_new_schema_version(dbname, sqldb_dpath, sqldb_fname,
     TESTING_NEW_SQL_VERSION = version_current != version_next
     if TESTING_NEW_SQL_VERSION:
         print('[sql] ATTEMPTING TO TEST NEW SQLDB VERSION')
-        devdb_list = ['PZ_MTEST', 'testdb1', 'testdb0', 'testdb2',
-                      'testdb_dst2', 'emptydatabase']
-        testing_newschmea = ut.is_developer() and dbname in devdb_list
-        #testing_newschmea = False
-        #ut.is_developer() and ibs.get_dbname() in ['PZ_MTEST', 'testdb1']
+        testing_newschmea = False
         if testing_newschmea:
             # Set to true until the schema module is good then continue tests
             # with this set to false
-            testing_force_fresh = True or ut.get_argflag('--force-fresh')
+            testing_force_fresh = True or ub.argflag('--force-fresh')
             # Work on a fresh schema copy when developing
             dev_sqldb_fname = ut.augpath(sqldb_fname, '_develop_schema')
             sqldb_fpath     = join(sqldb_dpath, sqldb_fname)
@@ -322,7 +311,7 @@ def dev_test_new_schema_version(dbname, sqldb_dpath, sqldb_fname,
     return version_current, sqldb_fname
 
 
-@six.add_metaclass(ut.ReloadingMetaclass)
+# @six.add_metaclass(ut.ReloadingMetaclass)
 class SQLDatabaseController(object):
     """
     Interface to an SQL database
@@ -330,14 +319,14 @@ class SQLDatabaseController(object):
 
     @profile
     def __init__(db, sqldb_dpath='.', sqldb_fname='database.sqlite3',
-                 text_factory=six.text_type, inmemory=None, fpath=None,
+                 text_factory=str, inmemory=None, fpath=None,
                  readonly=None, always_check_metadata=True,
                  timeout=TIMEOUT):
         """ Creates db and opens connection
 
         Args:
-            sqldb_dpath (unicode):  directory path string(default = '.')
-            sqldb_fname (unicode): (default = 'database.sqlite3')
+            sqldb_dpath (str):  directory path string(default = '.')
+            sqldb_fname (str): (default = 'database.sqlite3')
             text_factory (type): (default = unicode)
             inmemory (None): (default = None)
             fpath (str):  file path string(default = None)
@@ -350,8 +339,8 @@ class SQLDatabaseController(object):
             >>> # ENABLE_DOCTEST
             >>> from dtool_ibeis.sql_control import *  # NOQA
             >>> ut.exec_funckw(SQLDatabaseController.__init__, locals())
-            >>> sqldb_dpath = ut.ensure_app_resource_dir('dtool_ibeis')
-            >>> sqldb_fname = u'test_database.sqlite3'
+            >>> sqldb_dpath = os.fspath(ub.Path.appdir('dtool_ibeis').ensuredir())
+            >>> sqldb_fname = 'test_database.sqlite3'
             >>> readonly = False
             >>> db = SQLDatabaseController(sqldb_dpath, sqldb_fname)
             >>> db.print_schema()
@@ -452,25 +441,12 @@ class SQLDatabaseController(object):
             #lite.enable_callback_tracebacks(True)
             #db.fpath = ':memory:'
 
-            if six.PY3:
-                # References:
-                # http://stackoverflow.com/questions/10205744/opening-sqlite3-database-from-python-in-read-only-mode
-                uri = 'file:' + db.fpath
-                if db.readonly:
-                    uri += '?mode=ro'
-                connection = lite.connect(uri, uri=True, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
-            else:
-                import os
-                if db.readonly:
-                    assert not ut.WIN32, 'cannot open readonly on windows.'
-                    flag = os.O_RDONLY  # if db.readonly else os.O_RDWR
-                    fd = os.open(db.fpath, flag)
-                    uri = '/dev/fd/%d' % fd
-                    connection = lite.connect(uri, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
-                    os.close(fd)
-                else:
-                    uri = db.fpath
-                    connection = lite.connect(uri, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
+            # References:
+            # http://stackoverflow.com/questions/10205744/opening-sqlite3-database-from-python-in-read-only-mode
+            uri = 'file:' + db.fpath
+            if db.readonly:
+                uri += '?mode=ro'
+            connection = lite.connect(uri, uri=True, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
 
         # Keep track of what thead this was started in
         threadid = threading.current_thread()
@@ -515,7 +491,7 @@ class SQLDatabaseController(object):
         except (lite.OperationalError, NameError):
             orig_table_kw = None
 
-        meta_table_kw = ut.odict([
+        meta_table_kw = ub.odict([
             (u'tablename', METADATA_TABLE),
             (u'coldef_list',  [
                 (u'metadata_rowid',               u'INTEGER PRIMARY KEY'),
@@ -570,7 +546,7 @@ class SQLDatabaseController(object):
             >>> print('New Database: %r is valid' % (uuid_, ))
             >>> assert isinstance(uuid_, uuid.UUID)
             >>> # Check existing database keeps UUID
-            >>> sqldb_dpath = ut.ensure_app_resource_dir('dtool_ibeis')
+            >>> sqldb_dpath = os.fspath(ub.Path.appdir('dtool_ibeis').ensuredir())
             >>> sqldb_fname = u'test_database.sqlite3'
             >>> readonly = False
             >>> db1 = SQLDatabaseController(sqldb_dpath, sqldb_fname)
@@ -583,7 +559,7 @@ class SQLDatabaseController(object):
         import uuid
         db_init_uuid_str = db.get_metadata_val('database_init_uuid', default=None)
         if db_init_uuid_str is None and ensure:
-            db_init_uuid_str = six.text_type(uuid.uuid4())
+            db_init_uuid_str = str(uuid.uuid4())
             colnames = ['metadata_key', 'metadata_value']
             params_iter = zip(['database_init_uuid'], [db_init_uuid_str])
             # We don't care to find any, because we know there is no version
@@ -600,7 +576,7 @@ class SQLDatabaseController(object):
         """
         if NOT_QUIET:
             print('[sql] Copying database into RAM')
-        tempfile = cStringIO()
+        tempfile = io.StringIO()
         for line in db.connection.iterdump():
             tempfile.write('%s\n' % line)
         db.connection.close()
@@ -611,7 +587,6 @@ class SQLDatabaseController(object):
         db.connection.commit()
         db.connection.row_factory = lite.Row
 
-    #@ut.memprof
     def reboot(db):
         print('[sql] reboot')
         db.cur.close()
@@ -746,25 +721,25 @@ class SQLDatabaseController(object):
         the first item of params_iter must be a superkey (like a uuid),
 
         Does not add None values. Does not add duplicate values.
-        For each None input returns None ouptut.
+        For each None input returns None output.
         For each duplicate input returns existing rowid
 
         Args:
             tblname (str): table name to add into
 
-            colnames (tuple of strs): columns whos values are specified in params_iter
+            colnames (Tuple[str, ...]): of strs columns whos values are specified in params_iter
 
-            params_iter (iterable): an iterable of tuples where each tuple corresonds to a row
+            params_iter (Iterable): an iterable of tuples where each tuple corresonds to a row
 
-            get_rowid_from_superkey (func): function that tests if a row needs
+            get_rowid_from_superkey (callable): function that tests if a row needs
                 to be added. It should return None for any new rows to be inserted.
                 It should return the existing rowid if one exists
 
-            superkey_paramx (tuple of ints): indices of tuples in params_iter which
+            superkey_paramx (Tuple[int, ...]): indices of tuples in params_iter which
                 correspond to superkeys. defaults to (0,)
 
         Returns:
-            iterable: rowid_list_ -- list of newly added or previously added rowids
+            Iterable: rowid_list_ -- list of newly added or previously added rowids
 
         Example:
             >>> # ENABLE_DOCTEST
@@ -789,7 +764,7 @@ class SQLDatabaseController(object):
             >>> for superkey in superkey_colnames:
             >>>    if all(k in colnames for k in superkey):
             >>>        superkey_paramx = [colnames.index(k) for k in superkey]
-            >>>        superkey_colnames = ut.take(colnames, superkey_paramx)
+            >>>        superkey_colnames = list(ub.take(colnames, superkey_paramx))
             >>>        break
             >>> def get_rowid_from_superkey(superkeys_list):
             >>>     return db.get_where_eq(tblname, ('rowid',), zip(superkeys_list), superkey_colnames)
@@ -806,7 +781,6 @@ class SQLDatabaseController(object):
                           for x in superkey_paramx]
         # ADD_CLEANLY_2: PREFORM INPUT CHECKS
         # check which parameters are valid
-        #and not any(ut.flag_None_items(params))
         isvalid_list = [params is not None for params in params_list]
         # Check for duplicate inputs
         isunique_list = ut.flag_unique_items(list(zip(*superkey_lists)))
@@ -823,7 +797,7 @@ class SQLDatabaseController(object):
         if not any(needsadd_list):
             return rowid_list_  # There is nothing to add. Return the rowids
         # ADD_CLEANLY_3.2: PERFORM DIRTY ADDITIONS
-        dirty_params = ut.compress(params_list, needsadd_list)
+        dirty_params = list(ub.compress(params_list, needsadd_list))
         if ut.VERBOSE:
             print('[sql] adding %r/%r new %s' % (len(dirty_params), len(params_list), tblname))
         # Add any unadded parameters to the database
@@ -885,7 +859,7 @@ class SQLDatabaseController(object):
         assert len(where_colnames) == 1
         assert len(params_iter_[0]) == 1
         where_colname = where_colnames[0]
-        where_set = list(set(ut.flatten(params_iter_)))
+        where_set = list(set(ub.flatten(params_iter_)))
 
         where_set_str = ['%r' % (where_value,) for where_value in where_set]
 
@@ -939,7 +913,7 @@ class SQLDatabaseController(object):
         where_clause = (' %s ' % (op,)).join(andwhere_clauses)
         fmtdict = { 'tblname'     : tblname,
                     'where_clauses' :  where_clause, }
-        operation_fmt = ut.codeblock(
+        operation_fmt = ub.codeblock(
             '''
             SELECT EXISTS(
             SELECT 1
@@ -964,12 +938,12 @@ class SQLDatabaseController(object):
 
         Args:
             tblname (str): table name to get from
-            colnames (tuple of str): column names to grab from
-            id_iter (iterable): iterable of search keys
+            colnames (Tuple[str, ...]): column names to grab from
+            id_iter (Iterable): iterable of search keys
             id_colname (str): column to be used as the search key (default: rowid)
             eager (bool): use eager evaluation
             unpack_scalars (bool): default True
-            id_colname (bool): default False. Experimental feature that could result in a 10x speedup
+            assume_unique (bool): default False. Experimental feature that could result in a 10x speedup
 
         CommandLine:
             python -m dtool_ibeis.sql_control get
@@ -1007,7 +981,7 @@ class SQLDatabaseController(object):
             print('[sql]' + ut.get_caller_name(list(range(1, 4))) + ' db.get(%r, %r, ...)' %
                   (tblname, colnames,))
         assert isinstance(colnames, tuple), 'must specify column names TUPLE to get from'
-        #if isinstance(colnames, six.string_types):
+        #if isinstance(colnames, str):
         #    colnames = (colnames,)
 
         if assume_unique and id_iter is not None and id_colname == 'rowid' and len(colnames) == 1:
@@ -1027,7 +1001,7 @@ class SQLDatabaseController(object):
             results = db.cur.execute(operation).fetchall()
             import numpy as np
             sortx = np.argsort(np.argsort(id_iter))
-            results = ut.take(results, sortx)
+            results = list(ub.take(results, sortx))
             if kwargs.get('unpack_scalars', True):
                 results = ut.take_column(results, 0)
             return results
@@ -1070,7 +1044,7 @@ class SQLDatabaseController(object):
             >>> depc.clear_all()
         """
         assert isinstance(colnames, tuple)
-        #if isinstance(colnames, six.string_types):
+        #if isinstance(colnames, str):
         #    colnames = (colnames,)
         val_list = list(val_iter)  # eager evaluation
         id_list = list(id_iter)  # eager evaluation
@@ -1098,7 +1072,7 @@ class SQLDatabaseController(object):
                         for key in key_list:
                             index_list = debug_dict[key]
                             assert len(index_list) > 1
-                            value_list = ut.take(val_list, index_list)
+                            value_list = list(ub.take(val_list, index_list))
                             assert all(value == value_list[0] for value in value_list), 'Passing a non-unique list of ids with different set values'
                             pop_list += index_list[1:]
 
@@ -1119,8 +1093,8 @@ class SQLDatabaseController(object):
         elif duplicate_behavior == 'filter':
             # Keep only the first setting of every row
             isunique_list = ut.flag_unique_items(id_list)
-            id_list  = ut.compress(id_list, isunique_list)
-            val_list = ut.compress(val_list, isunique_list)
+            id_list  = list(ub.compress(id_list, isunique_list))
+            val_list = list(ub.compress(val_list, isunique_list))
         else:
             raise AssertionError(
                 ('unknown duplicate_behavior=%r. '
@@ -1223,11 +1197,9 @@ class SQLDatabaseController(object):
                 result_list = list(result_iter)
             except Exception as ex:
                 ut.printex(ex, key_list=[(str, 'operation'), 'params'])
-                # ut.sys.exit(1)
                 raise
         return result_list
 
-    #@ut.memprof
     @profile
     def executemany(db, operation, params_iter, verbose=VERBOSE_SQL,
                     unpack_scalars=True, nInput=None, eager=True,
@@ -1265,7 +1237,7 @@ class SQLDatabaseController(object):
         with SQLExecutionContext(db, operation, **contextkw) as context:
             if eager:
                 if showprog:
-                    if isinstance(showprog, six.string_types):
+                    if isinstance(showprog, str):
                         lbl = showprog
                     else:
                         lbl = 'sqlread'
@@ -1296,7 +1268,7 @@ class SQLDatabaseController(object):
     #    db.connection.commit()
 
     def dump(db, file_=None, **kwargs):
-        if file_ is None or isinstance(file_, six.string_types):
+        if file_ is None or isinstance(file_, str):
             db.dump_to_fpath(file_, **kwargs)
         else:
             db.dump_to_file(file_, **kwargs)
@@ -1313,8 +1285,7 @@ class SQLDatabaseController(object):
             db.dump_to_file(file_, **kwargs)
 
     def dump_to_string(db, **kwargs):
-        #string_file = cStringIO.StringIO()
-        string_file = cStringIO()
+        string_file = io.StringIO()
         db.dump_to_file(string_file, **kwargs)
         retstr = string_file.getvalue()
         return retstr
@@ -1333,9 +1304,6 @@ class SQLDatabaseController(object):
                 if not include_metadata or 'metadata' not in line:
                     continue
             to_write = '%s\n' % line
-            # Ensure python2 writes in bytes
-            if six.PY2 and isinstance(to_write, unicode):  # NOQA
-                to_write = to_write.encode('utf8')
             try:
                 file_.write(to_write)
             except UnicodeEncodeError:
@@ -1367,7 +1335,7 @@ class SQLDatabaseController(object):
             >>> from dtool_ibeis.sql_control import *  # NOQA
             >>> db = testdata_depc()['notch'].db
             >>> metadata_items = db.get_metadata_items()
-            >>> result = ('metadata_items = %s' % (ut.repr2(sorted(metadata_items)),))
+            >>> result = ('metadata_items = %s' % (ub.repr2(sorted(metadata_items)),))
             >>> print(result)
         """
         metadata_rowids = db.get_all_rowids(METADATA_TABLE)
@@ -1389,7 +1357,7 @@ class SQLDatabaseController(object):
         params = [key, val]
         db.executeone(operation, params, verbose=False)
 
-    #def get_metadata_val(db, key, eval_=False, default=ut.NoParam):
+    #def get_metadata_val(db, key, eval_=False, default=ub.NoParam):
     @profile
     def get_metadata_val(db, key, eval_=False, default=None):
         """
@@ -1503,9 +1471,9 @@ class SQLDatabaseController(object):
 
         # ASSERT VALID TYPES
         for name, type_ in coldef_list:
-            assert isinstance(name, six.string_types)  and len(name)  > 0, (
+            assert isinstance(name, str)  and len(name)  > 0, (
                 'cannot have empty name. name=%r, type_=%r' % (name, type_))
-            assert isinstance(type_, six.string_types) and len(type_) > 0, (
+            assert isinstance(type_, str) and len(type_) > 0, (
                 'cannot have empty type. name=%r, type_=%r' % (name, type_))
 
         body_list = []
@@ -1626,7 +1594,7 @@ class SQLDatabaseController(object):
         if VERBOSE_SQL or ut.VERBOSE:
             print('[sql] schema modifying tablename=%r' % tablename)
             print('[sql] * colmap_list = ' + 'None' if colmap_list is None else
-                  ut.repr2(colmap_list))
+                  ub.repr2(colmap_list))
 
         if colmap_list is None:
             colmap_list = []
@@ -1778,7 +1746,7 @@ class SQLDatabaseController(object):
         id_iter = [(key,) for key in key_old_list]
         val_iter = [(key,) for key in key_new_list]
         colnames = ('metadata_key',)
-        #print('Setting metadata_key from %s to %s' % (ut.repr2(id_iter), ut.repr2(val_iter)))
+        #print('Setting metadata_key from %s to %s' % (ub.repr2(id_iter), ub.repr2(val_iter)))
         db.set(METADATA_TABLE, colnames, val_iter, id_iter, id_colname='metadata_key')
 
     def drop_table(db, tablename):
@@ -1826,12 +1794,12 @@ class SQLDatabaseController(object):
         """
         if dump_dir is None:
             dump_dir = join(db.dir_, 'CSV_DUMP')
-        ut.ensuredir(dump_dir)
+        ub.ensuredir(dump_dir)
         for tablename in db.get_table_names():
             table_fname = tablename + '.csv'
             table_fpath = join(dump_dir, table_fname)
             table_csv = db.get_table_csv(tablename)
-            ut.writeto(table_fpath, table_csv)
+            ub.Path(table_fpath).write_text(table_csv)
 
     def get_schema_current_autogeneration_str(db, autogen_cmd=''):
         """ Convenience: Autogenerates the most up-to-date database schema
@@ -1860,7 +1828,7 @@ class SQLDatabaseController(object):
         line_list.append('AUTOGENERATED ON ' + ut.timestamp('printable'))
         line_list.append('AutogenCommandLine:')
         # TODO: Fix autogen command
-        line_list.append(ut.indent(autogen_cmd, tab1))
+        line_list.append(ub.indent(autogen_cmd, tab1))
         line_list.append(ut.TRIPLE_DOUBLE_QUOTE)
         line_list.append('# -*- coding: utf-8 -*-')
         #line_list.append('from __future__ import absolute_import, division, print_function')
@@ -1898,7 +1866,7 @@ class SQLDatabaseController(object):
     def get_coldef_list(db, tablename):
         """
         Returns:
-            list of (str, str) : each tuple is (col_name, col_type)
+            List[Tuple[str, str]]: each tuple is (col_name, col_type)
         """
         column_list = db.get_columns(tablename)
 
@@ -1911,7 +1879,7 @@ class SQLDatabaseController(object):
             elif column[3] == 1:
                 col_type += ' NOT NULL'
             elif column[4] is not None:
-                default_value = six.text_type(column[4])
+                default_value = str(column[4])
                 # HACK: add parens if the value contains parens in the future
                 # all default values should contain parens
                 LEOPARD_TURK_HACK = True
@@ -1947,10 +1915,10 @@ class SQLDatabaseController(object):
             >>>     ('time_added', "INTEGER DEFAULT (CAST(STRFTIME('%s', 'NOW', 'UTC') AS INTEGER))")
             >>> ))
             >>> autogen_dict = db.get_table_autogen_dict(tablename)
-            >>> result = ut.repr2(autogen_dict, nl=2)
+            >>> result = ub.repr2(autogen_dict, nl=2)
             >>> print(result)
         """
-        autogen_dict = ut.odict()
+        autogen_dict = ub.odict()
         autogen_dict['tablename'] = tablename
         autogen_dict['coldef_list'] = db.get_coldef_list(tablename)
         autogen_dict['docstr'] = db.get_table_docstr(tablename)
@@ -1987,7 +1955,7 @@ class SQLDatabaseController(object):
         tab2 = ' ' * 8
         line_list.append(tab1 + 'db.add_table(%s, [' % (ut.repr2(tablename),))
         # column_list = db.get_columns(tablename)
-        # colnamerepr_list = [ut.repr2(six.text_type(column[1]))
+        # colnamerepr_list = [ut.repr2(str(column[1]))
         #                     for column in column_list]
         autogen_dict = db.get_table_autogen_dict(tablename)
         coldef_list = autogen_dict['coldef_list']
@@ -2177,7 +2145,7 @@ class SQLDatabaseController(object):
             tablename (str): table name
 
         Returns:
-            column_list : list of tuples with format:
+            Any: column_list : list of tuples with format:
                 (
                     column_id  : id of the column
                     name       : the name of the column
@@ -2224,7 +2192,7 @@ class SQLDatabaseController(object):
     def get_column_names(db, tablename):
         """ Conveinience: Returns the sql tablename columns """
         column_list = db.get_columns(tablename)
-        column_names = ut.lmap(six.text_type, ut.take_column(column_list, 1))
+        column_names = ut.lmap(str, ut.take_column(column_list, 1))
         return column_names
 
     def get_column(db, tablename, name):
@@ -2243,13 +2211,13 @@ class SQLDatabaseController(object):
         """
         aid = 30
         db = ibs.staging
-        rowids = ut.flatten(ibs.get_review_rowids_from_single([aid]))
+        rowids = list(ub.flatten(ibs.get_review_rowids_from_single([aid])))
         tablename = 'reviews'
         exclude_columns = 'review_user_confidence review_user_identity'.split(' ')
         print(db.get_table_as_pandas(tablename, rowids, exclude_columns=exclude_columns))
 
         db = ibs.db
-        rowids = ut.flatten(ibs.get_annotmatch_rowids_from_aid([aid]))
+        rowids = list(ub.flatten(ibs.get_annotmatch_rowids_from_aid([aid])))
         tablename = 'annotmatch'
         exclude_columns = 'annotmatch_confidence annotmatch_posixtime_modified annotmatch_reviewer'.split(' ')
         print(db.get_table_as_pandas(tablename, rowids, exclude_columns=exclude_columns))
@@ -2261,7 +2229,7 @@ class SQLDatabaseController(object):
             exclude_columns=exclude_columns)
         import pandas as pd
         index = pd.Index(rowids, name='rowid')
-        df = pd.DataFrame(ut.dzip(column_names, column_list), index=index)
+        df = pd.DataFrame(ub.dzip(column_names, column_list), index=index)
         return df
 
     def get_table_column_data(db, tablename, columns=None, exclude_columns=[], rowids=None):
@@ -2321,7 +2289,7 @@ class SQLDatabaseController(object):
             >>> tablename = 'keypoint'
             >>> db = depc[tablename].db
             >>> table_def = db.make_json_table_definition(tablename)
-            >>> result = ('table_def = %s' % (ut.repr2(table_def, nl=True),))
+            >>> result = ('table_def = %s' % (ub.repr2(table_def, nl=True),))
             >>> print(result)
             table_def = {
                 'keypoint_rowid': 'INTEGER',
@@ -2339,7 +2307,7 @@ class SQLDatabaseController(object):
         #dependson = db.get_metadata_val(tablename + '_dependson', eval_=True, default=None)
 
         richcolinfo_list = db.get_columns(tablename)
-        table_dict_def = ut.odict([(r.name, r.type_) for r in richcolinfo_list])
+        table_dict_def = ub.odict([(r.name, r.type_) for r in richcolinfo_list])
         if dependsmap is not None:
             for key, val in dependsmap.items():
                 if val[0] == tablename:
@@ -2354,9 +2322,7 @@ class SQLDatabaseController(object):
                     assert len(superkey) == 1, 'unhandled'
                     colinfo = {_.name: _ for _ in _deptablecols}[superkey[0]]
                     table_dict_def[superkey[0]] = colinfo.type_
-        #json_def_str = ut.repr2(table_dict_def, aligned=True)
         return table_dict_def
-        #table_obj_def =
 
     def get_table_new_transferdata(db, tablename, exclude_columns=[]):
         """
@@ -2378,9 +2344,9 @@ class SQLDatabaseController(object):
             ...     new_transferdata = db.get_table_new_transferdata(tablename)
             ...     column_list, column_names, extern_colx_list, extern_superkey_colname_list, extern_superkey_colval_list, extern_tablename_list, extern_primarycolnames_list = new_transferdata
             ...     print('tablename = %r' % (tablename,))
-            ...     print('colnames = ' + ut.repr2(column_names))
-            ...     print('extern_colx_list = ' + ut.repr2(extern_colx_list))
-            ...     print('extern_superkey_colname_list = ' + ut.repr2(extern_superkey_colname_list))
+            ...     print('colnames = ' + ub.repr2(column_names))
+            ...     print('extern_colx_list = ' + ub.repr2(extern_colx_list))
+            ...     print('extern_superkey_colname_list = ' + ub.repr2(extern_superkey_colname_list))
             ...     print('L___')
 
         Example:
@@ -2396,9 +2362,9 @@ class SQLDatabaseController(object):
             ...     new_transferdata = db.get_table_new_transferdata(tablename)
             ...     column_list, column_names, extern_colx_list, extern_superkey_colname_list, extern_superkey_colval_list, extern_tablename_list, extern_primarycolnames_list = new_transferdata
             ...     print('tablename = %r' % (tablename,))
-            ...     print('colnames = ' + ut.repr2(column_names))
-            ...     print('extern_colx_list = ' + ut.repr2(extern_colx_list))
-            ...     print('extern_superkey_colname_list = ' + ut.repr2(extern_superkey_colname_list))
+            ...     print('colnames = ' + ub.repr2(column_names))
+            ...     print('extern_colx_list = ' + ub.repr2(extern_colx_list))
+            ...     print('extern_superkey_colname_list = ' + ub.repr2(extern_superkey_colname_list))
             ...     print('L___')
 
         Example:
@@ -2414,27 +2380,26 @@ class SQLDatabaseController(object):
             >>> column_list, column_names, extern_colx_list, extern_superkey_colname_list, extern_superkey_colval_list, extern_tablename_list, extern_primarycolnames_list = new_transferdata
             >>> dependsmap = db.get_metadata_val(tablename + '_dependsmap', eval_=True, default=None)
             >>> print('tablename = %r' % (tablename,))
-            >>> print('colnames = ' + ut.repr2(column_names))
-            >>> print('extern_colx_list = ' + ut.repr2(extern_colx_list))
-            >>> print('extern_superkey_colname_list = ' + ut.repr2(extern_superkey_colname_list))
-            >>> print('dependsmap = %s' % (ut.repr2(dependsmap, nl=True),))
+            >>> print('colnames = ' + ub.repr2(column_names))
+            >>> print('extern_colx_list = ' + ub.repr2(extern_colx_list))
+            >>> print('extern_superkey_colname_list = ' + ub.repr2(extern_superkey_colname_list))
+            >>> print('dependsmap = %s' % (ub.repr2(dependsmap, nl=True),))
             >>> print('L___')
             >>> tablename = ibs.const.ANNOTATION_TABLE
             >>> new_transferdata = db.get_table_new_transferdata(tablename)
             >>> column_list, column_names, extern_colx_list, extern_superkey_colname_list, extern_superkey_colval_list, extern_tablename_list, extern_primarycolnames_list = new_transferdata
             >>> dependsmap = db.get_metadata_val(tablename + '_dependsmap', eval_=True, default=None)
             >>> print('tablename = %r' % (tablename,))
-            >>> print('colnames = ' + ut.repr2(column_names))
-            >>> print('extern_colx_list = ' + ut.repr2(extern_colx_list))
-            >>> print('extern_superkey_colname_list = ' + ut.repr2(extern_superkey_colname_list))
-            >>> print('dependsmap = %s' % (ut.repr2(dependsmap, nl=True),))
+            >>> print('colnames = ' + ub.repr2(column_names))
+            >>> print('extern_colx_list = ' + ub.repr2(extern_colx_list))
+            >>> print('extern_superkey_colname_list = ' + ub.repr2(extern_superkey_colname_list))
+            >>> print('dependsmap = %s' % (ub.repr2(dependsmap, nl=True),))
             >>> print('L___')
         """
-        import utool
-        with utool.embed_on_exception_context:
+        if 1:
             all_column_names = db.get_column_names(tablename)
             isvalid_list = [name not in exclude_columns for name in all_column_names]
-            column_names = ut.compress(all_column_names, isvalid_list)
+            column_names = list(ub.compress(all_column_names, isvalid_list))
             column_list = [db.get_column(tablename, name)
                            for name in column_names if name not in exclude_columns]
 
@@ -2445,7 +2410,7 @@ class SQLDatabaseController(object):
             extern_primarycolnames_list = []
             dependsmap = db.get_metadata_val(tablename + '_dependsmap', eval_=True, default=None)
             if dependsmap is not None:
-                for colname, dependtup in six.iteritems(dependsmap):
+                for colname, dependtup in dependsmap.items():
                     assert len(dependtup) == 3, 'must be 3 for now'
                     (extern_tablename, extern_primary_colnames, extern_superkey_colnames) = dependtup
                     if extern_primary_colnames is None:
@@ -2537,7 +2502,7 @@ class SQLDatabaseController(object):
         FINISHME
 
         Args:
-            db_src (SQLController): merge data from db_src into db
+            db_src (SQLDatabaseController): merge data from db_src into db
 
         CommandLine:
             python -m dtool_ibeis.sql_control --test-merge_databases_new:0
@@ -2672,11 +2637,11 @@ class SQLDatabaseController(object):
             if rowid_subsets is not None and tablename in rowid_subsets:
                 valid_rowids = set(rowid_subsets[tablename])
                 isvalid_list = [rowid in valid_rowids for rowid in old_rowid_list]
-                valid_old_rowid_list = ut.compress(old_rowid_list, isvalid_list)
-                valid_column_list_ = [ut.compress(col, isvalid_list)
+                valid_old_rowid_list = list(ub.compress(old_rowid_list, isvalid_list))
+                valid_column_list_ = [list(ub.compress(col, isvalid_list))
                                       for col in column_list_]
                 valid_extern_superkey_colval_list =  [
-                    ut.compress(col, isvalid_list)
+                    list(ub.compress(col, isvalid_list))
                     for col in extern_superkey_colval_list
                 ]
                 print(' * filtered number of rows from %d to %d.' % (
@@ -2819,7 +2784,6 @@ class SQLDatabaseController(object):
             >>> rowids = depc.get_rowids('notch', [1, 2, 3])
             >>> table = depc['notch']
             >>> db = table.db
-            >>> #ut.exec_funckw(db.get_table_csv, globals())
             >>> tablename = 'notch'
             >>> exclude_columns = []
             >>> csv_table = db.get_table_csv(tablename, exclude_columns, truncate=True)
@@ -2837,7 +2801,6 @@ class SQLDatabaseController(object):
 
         csv_table = ut.make_csv_table(column_list, column_lbls, header, comma_repl=';')
         csv_table = ut.ensure_unicode(csv_table)
-        #csv_table = ut.make_csv_table(column_list, column_lbls, header, comma_repl='<comma>')
         return csv_table
 
     def print_table_csv(db, tablename, exclude_columns=[], truncate=False):
@@ -2860,12 +2823,10 @@ class SQLDatabaseController(object):
             print(db.get_table_csv_header(tablename) + '\n')
 
     def view_db_in_external_reader(db):
-        import os
         known_readers = ['sqlitebrowser', 'sqliteman']
         sqlite3_reader = known_readers[0]
         sqlite3_db_fpath = db.get_fpath()
         os.system(sqlite3_reader + ' ' + sqlite3_db_fpath)
-        #ut.cmd(sqlite3_reader, sqlite3_db_fpath)
         pass
 
     def set_db_version(db, version):
@@ -2900,7 +2861,7 @@ class SQLDatabaseController(object):
         return table
 
 
-@six.add_metaclass(ut.ReloadingMetaclass)
+# @six.add_metaclass(ut.ReloadingMetaclass)
 class SQLTable(ut.NiceRepr):
     """
     convinience object for dealing with a specific table
@@ -2953,7 +2914,5 @@ if __name__ == '__main__':
         python -m dtool_ibeis.sql_control
         python -m dtool_ibeis.sql_control --allexamples
     """
-    import multiprocessing
-    multiprocessing.freeze_support()  # for win32
-    import utool as ut  # NOQA
-    ut.doctest_funcs()
+    import xdoctest
+    xdoctest.doctest_module(__file__)

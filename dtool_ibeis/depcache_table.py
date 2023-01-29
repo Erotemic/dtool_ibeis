@@ -20,18 +20,22 @@ FIXME:
 
 
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
 import utool as ut
 import ubelt as ub
-import six
 import itertools as it
 from dtool_ibeis.sql_control import SQLDatabaseController
-from six.moves import zip, range
 from os.path import join, exists
 from dtool_ibeis import __SQLITE__ as lite  # NOQA
 import networkx as nx
 import re
 (print, rrr, profile) = ut.inject2(__name__, '[depcache_table]')
+
+
+__docstubs__ = """
+#import dtool_ibeis
+from typing import Union
+from dtool_ibeis.depcache_control import DependencyCache
+"""
 
 
 EXTERN_SUFFIX = '_extern_uri'
@@ -160,7 +164,7 @@ class _TableConfigHelper(object):
             rowid_list (list): native table rowids
 
         Returns:
-            parent_rowids (list of tuples): tuples of parent rowids
+            List[Tuple]: parent_rowids  : tuples of parent rowids
 
         Example:
             >>> # TODO: Need a test that creates a table
@@ -179,7 +183,7 @@ class _TableConfigHelper(object):
             rowid_list (list): native table rowids
 
         Returns:
-            parent_rowids (list of tuples): tuples of parent rowids
+            List[Tuple]: parent_rowids : tuples of parent rowids
 
         Example:
             >>> # TODO: Need a test that creates a table
@@ -772,7 +776,7 @@ class _TableInternalSetup(ub.NiceRepr):
                 colattr['isnwise'] = True
                 colattr['nwise_total'] = nwise_total
                 colattr['nwise_idx'] = nwise_idx
-                colattr['local_input_id'] += six.text_type(nwise_idx)
+                colattr['local_input_id'] += str(nwise_idx)
             else:
                 if not colattr['local_input_id']:
                     colattr['local_input_id'] = '1'
@@ -1486,6 +1490,7 @@ class _TableComputeHelper(object):
         convinience function around get_extern_fnames
 
         Exmaple:
+            >>> # xdoctest: +REQUIRES(module:ibeis)
             >>> from dtool_ibeis.depcache_table import *  # NOQA
             >>> import ibeis
             >>> ibs = ibeis.opendb(defaultdb='testdb1')
@@ -1527,7 +1532,7 @@ class _TableComputeHelper(object):
               parent_rowids, (and the root rowids?), and the config.
 
         Args:
-            parent_rowids (list of tuples) - list of tuples of rowids
+            parent_rowids (list[tuple]) - list of tuples of rowids
         """
         config_hashid = table.get_config_hashid([config_rowid])[0]
         prefix = table.tablename
@@ -1692,14 +1697,14 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         data_col_attrs - keeps track of computed data
 
     Attributes:
-        db (dtool_ibeis.SQLDatabaseController): pointer to underlying database
-        depc (dtool_ibeis.DependencyCache): pointer to parent cache
+        db (SQLDatabaseController): pointer to underlying database
+        depc (DependencyCache): pointer to parent cache
         tablename (str): name of the table
         docstr (str): documentation for table
         parent_tablenames (str): parent tables in depcache
         data_colnames (List[str]): columns produced by preproc_func
         data_coltypes (List[str]): column SQL types produced by preproc_func
-        preproc_func (func): worker function
+        preproc_func (callable): worker function
         vectorized (bool): by defaults it is assumed registered functions can
             process multiple inputs at once.
         taggable (bool): specifies if a computed object can be disconected from
@@ -2396,7 +2401,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             unpack_columns = table.default_to_unpack
         if colnames is None:
             requested_colnames = table.data_colnames
-        elif isinstance(colnames, six.string_types):
+        elif isinstance(colnames, str):
             # Unpack columns if only a single column is requested.
             requested_colnames = (colnames,)
             unpack_columns = True

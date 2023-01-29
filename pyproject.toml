@@ -8,12 +8,18 @@ ignore_missing_imports = true
 tags = [ "erotemic", "purepy", "github", "cv2"]
 mod_name = "dtool_ibeis"
 repo_name = "dtool_ibeis"
+rel_mod_parent_dpath = "."
+os = [ "linux", "osx", "win",]
+ci_pypy_versions = []
+supported_python_versions = ["3.7", "3.8", "3.9", "3.10", "3.11"]
 description = "dtool_ibeis - a dependency aware cache for ibeis"
 url="https://github.com/Erotemic/dtool_ibeis"
 author="Jon Crall"
 author_email="erotemic@gmail.com"
 dev_status = "beta"
+license = "Apache 2"
 autostage = true
+version = "{mod_dpath}/__init__.py::__version__"
 
 [tool.pytest.ini_options]
 addopts = "-p no:doctest --xdoctest --xdoctest-style=google --ignore-glob=setup.py"

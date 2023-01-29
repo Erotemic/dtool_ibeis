@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 implicit version of dependency cache from ibeis/templates/template_generator
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
 import utool as ut
 import numpy as np
-import six
-from six.moves import zip
 from dtool_ibeis import sql_control
 from dtool_ibeis import depcache_table
 from dtool_ibeis import base
@@ -101,8 +97,8 @@ class _CoreDependencyCache(object):
             print('[depc]  * preproc_func=%r' % (preproc_func,))
         # ----------
         # Sanitize inputs
-        if isinstance(tablename, six.string_types):
-            tablename = six.text_type(tablename)
+        if isinstance(tablename, str):
+            tablename = str(tablename)
         if parents is None:
             parents = [depc.root]
         if colnames is None:
@@ -113,7 +109,7 @@ class _CoreDependencyCache(object):
         if default_to_unpack is None:
             if ut.isiterable(colnames):
                 default_to_unpack = False
-                colnames = ut.lmap(six.text_type, colnames)
+                colnames = ut.lmap(str, colnames)
             else:
                 colnames = [colnames]
                 coltypes = [coltypes]
@@ -944,7 +940,7 @@ class _CoreDependencyCache(object):
         return num_deleted
 
 
-@six.add_metaclass(ut.ReloadingMetaclass)
+# , metaclass=ut.ReloadingMetaclass
 class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
     """
     Currently, to use this class a user must:
@@ -1038,7 +1034,7 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
                     if parent_data['isnwise']:
                         args = (parent_data['nwise_idx'], )
                         edge_type_parts.append('nwise_%s' % args)
-                        # local_input_id += six.text_type(parent_data['nwise_idx'])
+                        # local_input_id += str(parent_data['nwise_idx'])
                         # edge_type_parts.append('nwise_%s_%s_%s' % (
                         #     parentkey, tablekey, parent_data['nwise_idx'],))
                     edge_type_id = '_'.join(edge_type_parts)
@@ -1454,11 +1450,13 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
         The depcache needs to know about stateful properties of dynamic root
         objects in order to correctly compute their hashes.
 
-        >>> #ibs = ibeis.opendb(defaultdb='testdb1')
-        >>> root_rowids = ibs._get_all_aids()
-        >>> depc = ibs.depc_annot
-        >>> info_props = ['image_uuid', 'verts', 'theta']
-        >>> info_props = ['image_uuid', 'verts', 'theta', 'name', 'species', 'yaw']
+        Ignore:
+            >>> # xdoctest: +SKIP
+            >>> #ibs = ibeis.opendb(defaultdb='testdb1')
+            >>> root_rowids = ibs._get_all_aids()
+            >>> depc = ibs.depc_annot
+            >>> info_props = ['image_uuid', 'verts', 'theta']
+            >>> info_props = ['image_uuid', 'verts', 'theta', 'name', 'species', 'yaw']
         """
         getters = ut.dict_take(depc.root_getters, info_props)
         infotup_list = zip(*[getter(root_rowids) for getter in getters])

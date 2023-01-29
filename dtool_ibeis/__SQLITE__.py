@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 custom sqlite3 module that supports numpy types
 """
-from __future__ import absolute_import, division, print_function
 import sys
-import six
 import io
 import uuid
 import numpy as np
 import utool as ut
-from six.moves import input
 ut.noinject(__name__, '[dtool_ibeis.__SQLITE__]')
 
 
@@ -18,7 +14,7 @@ TRY_NEW_SQLITE3 = False
 
 # SQL This should be the only file which imports sqlite3
 if not TRY_NEW_SQLITE3:
-    from sqlite3 import Binary, register_adapter, register_converter
+    from sqlite3 import Binary, register_adapter, register_converter  # NOQA
     from sqlite3 import *  # NOQA
 
 #try:
@@ -61,19 +57,11 @@ def REGISTER_SQLITE3_TYPES():
     def _write_bool(b):
         return b
 
-    if six.PY2:
-        def _write_numpy_to_sqlite3(arr):
-            out = io.BytesIO()
-            np.save(out, arr)
-            out.seek(0)
-            #return buffer(out.read())
-            return Binary(out.read())
-    else:
-        def _write_numpy_to_sqlite3(arr):
-            out = io.BytesIO()
-            np.save(out, arr)
-            out.seek(0)
-            return memoryview(out.read())
+    def _write_numpy_to_sqlite3(arr):
+        out = io.BytesIO()
+        np.save(out, arr)
+        out.seek(0)
+        return memoryview(out.read())
 
     def _read_uuid_from_sqlite3(blob):
         try:
@@ -85,19 +73,14 @@ def REGISTER_SQLITE3_TYPES():
             input('continue... [enter]')
             return uuid.uuid4()
 
-    if six.PY2:
-        def _write_uuid_to_sqlite3(uuid_):
-            #return buffer(uuid_.bytes_le)
-            return Binary(uuid_.bytes_le)
-    elif six.PY3:
-        def _write_uuid_to_sqlite3(uuid_):
-            return memoryview(uuid_.bytes_le)
+    def _write_uuid_to_sqlite3(uuid_):
+        return memoryview(uuid_.bytes_le)
 
     def register_numpy_dtypes():
         if VERBOSE_SQL:
             print('Register NUMPY dtypes with SQLite3')
 
-        py_int_type = long if six.PY2 else int
+        py_int_type = int
         for dtype in (np.int8, np.int16, np.int32, np.int64,
                       np.uint8, np.uint16, np.uint32, np.uint64):
             register_adapter(dtype, py_int_type)
@@ -178,9 +161,6 @@ TYPE_TO_SQLTYPE = {
     dict: 'DICT',
     list: 'LIST',
 }
-
-if six.PY2:
-    TYPE_TO_SQLTYPE[six.text_type] = 'TEXT'
 
 # Clean namespace
 del REGISTER_SQLITE3_TYPES
