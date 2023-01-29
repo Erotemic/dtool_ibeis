@@ -1450,11 +1450,13 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
         The depcache needs to know about stateful properties of dynamic root
         objects in order to correctly compute their hashes.
 
-        >>> #ibs = ibeis.opendb(defaultdb='testdb1')
-        >>> root_rowids = ibs._get_all_aids()
-        >>> depc = ibs.depc_annot
-        >>> info_props = ['image_uuid', 'verts', 'theta']
-        >>> info_props = ['image_uuid', 'verts', 'theta', 'name', 'species', 'yaw']
+        Ignore:
+            >>> # xdoctest: +SKIP
+            >>> #ibs = ibeis.opendb(defaultdb='testdb1')
+            >>> root_rowids = ibs._get_all_aids()
+            >>> depc = ibs.depc_annot
+            >>> info_props = ['image_uuid', 'verts', 'theta']
+            >>> info_props = ['image_uuid', 'verts', 'theta', 'name', 'species', 'yaw']
         """
         getters = ut.dict_take(depc.root_getters, info_props)
         infotup_list = zip(*[getter(root_rowids) for getter in getters])

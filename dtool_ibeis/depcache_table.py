@@ -1490,6 +1490,7 @@ class _TableComputeHelper(object):
         convinience function around get_extern_fnames
 
         Exmaple:
+            >>> # xdoctest: +REQUIRES(module:ibeis)
             >>> from dtool_ibeis.depcache_table import *  # NOQA
             >>> import ibeis
             >>> ibs = ibeis.opendb(defaultdb='testdb1')
