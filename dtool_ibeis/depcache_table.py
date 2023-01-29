@@ -20,13 +20,10 @@ FIXME:
 
 
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
 import utool as ut
 import ubelt as ub
-import six
 import itertools as it
 from dtool_ibeis.sql_control import SQLDatabaseController
-from six.moves import zip, range
 from os.path import join, exists
 from dtool_ibeis import __SQLITE__ as lite  # NOQA
 import networkx as nx
@@ -772,7 +769,7 @@ class _TableInternalSetup(ub.NiceRepr):
                 colattr['isnwise'] = True
                 colattr['nwise_total'] = nwise_total
                 colattr['nwise_idx'] = nwise_idx
-                colattr['local_input_id'] += six.text_type(nwise_idx)
+                colattr['local_input_id'] += str(nwise_idx)
             else:
                 if not colattr['local_input_id']:
                     colattr['local_input_id'] = '1'
@@ -2396,7 +2393,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             unpack_columns = table.default_to_unpack
         if colnames is None:
             requested_colnames = table.data_colnames
-        elif isinstance(colnames, six.string_types):
+        elif isinstance(colnames, str):
             # Unpack columns if only a single column is requested.
             requested_colnames = (colnames,)
             unpack_columns = True

@@ -6,15 +6,13 @@ TODO; need to use some sort of sticky bit so
 sql files are created with reasonable permissions.
 """
 #from __future__ import absolute_import, division, print_function
-from __future__ import absolute_import, division, print_function, unicode_literals
-import six
 import re
 import parse
 import utool as ut
 import collections
 import threading
 from functools import partial
-from six.moves import map, zip, cStringIO
+import io
 from os.path import join, exists, dirname, basename
 from dtool_ibeis import __SQLITE__ as lite  # NOQA
 print, rrr, profile = ut.inject2(__name__)
@@ -322,7 +320,7 @@ def dev_test_new_schema_version(dbname, sqldb_dpath, sqldb_fname,
     return version_current, sqldb_fname
 
 
-@six.add_metaclass(ut.ReloadingMetaclass)
+# @six.add_metaclass(ut.ReloadingMetaclass)
 class SQLDatabaseController(object):
     """
     Interface to an SQL database
@@ -330,7 +328,7 @@ class SQLDatabaseController(object):
 
     @profile
     def __init__(db, sqldb_dpath='.', sqldb_fname='database.sqlite3',
-                 text_factory=six.text_type, inmemory=None, fpath=None,
+                 text_factory=str, inmemory=None, fpath=None,
                  readonly=None, always_check_metadata=True,
                  timeout=TIMEOUT):
         """ Creates db and opens connection
@@ -452,25 +450,12 @@ class SQLDatabaseController(object):
             #lite.enable_callback_tracebacks(True)
             #db.fpath = ':memory:'
 
-            if six.PY3:
-                # References:
-                # http://stackoverflow.com/questions/10205744/opening-sqlite3-database-from-python-in-read-only-mode
-                uri = 'file:' + db.fpath
-                if db.readonly:
-                    uri += '?mode=ro'
-                connection = lite.connect(uri, uri=True, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
-            else:
-                import os
-                if db.readonly:
-                    assert not ut.WIN32, 'cannot open readonly on windows.'
-                    flag = os.O_RDONLY  # if db.readonly else os.O_RDWR
-                    fd = os.open(db.fpath, flag)
-                    uri = '/dev/fd/%d' % fd
-                    connection = lite.connect(uri, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
-                    os.close(fd)
-                else:
-                    uri = db.fpath
-                    connection = lite.connect(uri, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
+            # References:
+            # http://stackoverflow.com/questions/10205744/opening-sqlite3-database-from-python-in-read-only-mode
+            uri = 'file:' + db.fpath
+            if db.readonly:
+                uri += '?mode=ro'
+            connection = lite.connect(uri, uri=True, detect_types=lite.PARSE_DECLTYPES, timeout=db.timeout)
 
         # Keep track of what thead this was started in
         threadid = threading.current_thread()
@@ -583,7 +568,7 @@ class SQLDatabaseController(object):
         import uuid
         db_init_uuid_str = db.get_metadata_val('database_init_uuid', default=None)
         if db_init_uuid_str is None and ensure:
-            db_init_uuid_str = six.text_type(uuid.uuid4())
+            db_init_uuid_str = str(uuid.uuid4())
             colnames = ['metadata_key', 'metadata_value']
             params_iter = zip(['database_init_uuid'], [db_init_uuid_str])
             # We don't care to find any, because we know there is no version
@@ -600,7 +585,7 @@ class SQLDatabaseController(object):
         """
         if NOT_QUIET:
             print('[sql] Copying database into RAM')
-        tempfile = cStringIO()
+        tempfile = io.StringIO()
         for line in db.connection.iterdump():
             tempfile.write('%s\n' % line)
         db.connection.close()
@@ -1007,7 +992,7 @@ class SQLDatabaseController(object):
             print('[sql]' + ut.get_caller_name(list(range(1, 4))) + ' db.get(%r, %r, ...)' %
                   (tblname, colnames,))
         assert isinstance(colnames, tuple), 'must specify column names TUPLE to get from'
-        #if isinstance(colnames, six.string_types):
+        #if isinstance(colnames, str):
         #    colnames = (colnames,)
 
         if assume_unique and id_iter is not None and id_colname == 'rowid' and len(colnames) == 1:
@@ -1070,7 +1055,7 @@ class SQLDatabaseController(object):
             >>> depc.clear_all()
         """
         assert isinstance(colnames, tuple)
-        #if isinstance(colnames, six.string_types):
+        #if isinstance(colnames, str):
         #    colnames = (colnames,)
         val_list = list(val_iter)  # eager evaluation
         id_list = list(id_iter)  # eager evaluation
@@ -1265,7 +1250,7 @@ class SQLDatabaseController(object):
         with SQLExecutionContext(db, operation, **contextkw) as context:
             if eager:
                 if showprog:
-                    if isinstance(showprog, six.string_types):
+                    if isinstance(showprog, str):
                         lbl = showprog
                     else:
                         lbl = 'sqlread'
@@ -1296,7 +1281,7 @@ class SQLDatabaseController(object):
     #    db.connection.commit()
 
     def dump(db, file_=None, **kwargs):
-        if file_ is None or isinstance(file_, six.string_types):
+        if file_ is None or isinstance(file_, str):
             db.dump_to_fpath(file_, **kwargs)
         else:
             db.dump_to_file(file_, **kwargs)
@@ -1313,8 +1298,7 @@ class SQLDatabaseController(object):
             db.dump_to_file(file_, **kwargs)
 
     def dump_to_string(db, **kwargs):
-        #string_file = cStringIO.StringIO()
-        string_file = cStringIO()
+        string_file = io.StringIO()
         db.dump_to_file(string_file, **kwargs)
         retstr = string_file.getvalue()
         return retstr
@@ -1333,9 +1317,6 @@ class SQLDatabaseController(object):
                 if not include_metadata or 'metadata' not in line:
                     continue
             to_write = '%s\n' % line
-            # Ensure python2 writes in bytes
-            if six.PY2 and isinstance(to_write, unicode):  # NOQA
-                to_write = to_write.encode('utf8')
             try:
                 file_.write(to_write)
             except UnicodeEncodeError:
@@ -1503,9 +1484,9 @@ class SQLDatabaseController(object):
 
         # ASSERT VALID TYPES
         for name, type_ in coldef_list:
-            assert isinstance(name, six.string_types)  and len(name)  > 0, (
+            assert isinstance(name, str)  and len(name)  > 0, (
                 'cannot have empty name. name=%r, type_=%r' % (name, type_))
-            assert isinstance(type_, six.string_types) and len(type_) > 0, (
+            assert isinstance(type_, str) and len(type_) > 0, (
                 'cannot have empty type. name=%r, type_=%r' % (name, type_))
 
         body_list = []
@@ -1911,7 +1892,7 @@ class SQLDatabaseController(object):
             elif column[3] == 1:
                 col_type += ' NOT NULL'
             elif column[4] is not None:
-                default_value = six.text_type(column[4])
+                default_value = str(column[4])
                 # HACK: add parens if the value contains parens in the future
                 # all default values should contain parens
                 LEOPARD_TURK_HACK = True
@@ -1987,7 +1968,7 @@ class SQLDatabaseController(object):
         tab2 = ' ' * 8
         line_list.append(tab1 + 'db.add_table(%s, [' % (ut.repr2(tablename),))
         # column_list = db.get_columns(tablename)
-        # colnamerepr_list = [ut.repr2(six.text_type(column[1]))
+        # colnamerepr_list = [ut.repr2(str(column[1]))
         #                     for column in column_list]
         autogen_dict = db.get_table_autogen_dict(tablename)
         coldef_list = autogen_dict['coldef_list']
@@ -2224,7 +2205,7 @@ class SQLDatabaseController(object):
     def get_column_names(db, tablename):
         """ Conveinience: Returns the sql tablename columns """
         column_list = db.get_columns(tablename)
-        column_names = ut.lmap(six.text_type, ut.take_column(column_list, 1))
+        column_names = ut.lmap(str, ut.take_column(column_list, 1))
         return column_names
 
     def get_column(db, tablename, name):
@@ -2445,7 +2426,7 @@ class SQLDatabaseController(object):
             extern_primarycolnames_list = []
             dependsmap = db.get_metadata_val(tablename + '_dependsmap', eval_=True, default=None)
             if dependsmap is not None:
-                for colname, dependtup in six.iteritems(dependsmap):
+                for colname, dependtup in dependsmap.items():
                     assert len(dependtup) == 3, 'must be 3 for now'
                     (extern_tablename, extern_primary_colnames, extern_superkey_colnames) = dependtup
                     if extern_primary_colnames is None:
@@ -2900,7 +2881,7 @@ class SQLDatabaseController(object):
         return table
 
 
-@six.add_metaclass(ut.ReloadingMetaclass)
+# @six.add_metaclass(ut.ReloadingMetaclass)
 class SQLTable(ut.NiceRepr):
     """
     convinience object for dealing with a specific table
