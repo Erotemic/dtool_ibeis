@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Interface into SQL for the IBEIS Controller
 
 TODO; need to use some sort of sticky bit so
 sql files are created with reasonable permissions.
 """
-#from __future__ import absolute_import, division, print_function
+import os
 import re
 import parse
 import ubelt as ub
@@ -87,7 +86,7 @@ def flattenize(list_):
         1000000 loops, best of 3: 1.18 us per loop
     """
     tuplized_iter   = map(tuplize, list_)
-    flatenized_list = list(map(ut.flatten, tuplized_iter))
+    flatenized_list = [list(ub.flatten(x)) for x in tuplized_iter]
     return flatenized_list
 
 # =======================
@@ -124,7 +123,6 @@ class SQLExecutionContext(object):
 
     def __enter__(context):
         """ Checks to see if the operating will change the database """
-        #ut.printif(lambda: '[sql] Callers: ' + ut.get_caller_name(range(3, 6)), DEBUG)
         if context.nInput is not None:
             context.operation_lbl = ('[sql] execute nInput=%d optype=%s: '
                                        % (context.nInput, context.operation_type))
@@ -152,10 +150,6 @@ class SQLExecutionContext(object):
             print(context.operation_lbl)
             if context.verbose:
                 print('[sql] operation=\n' + context.operation)
-        # Comment out timeing code
-        #if __debug__:
-        #    if NOT_QUIET and (VERBOSE_SQL or context.verbose):
-        #        context.tt = ut.tic(context.operation_lbl)
         return context
 
     #@profile
@@ -179,8 +173,8 @@ class SQLExecutionContext(object):
                 try:
                     coldef_list = context.db.get_coldef_list(tablename)
                     print('ERR REPORT: expected types = %s' % (ut.repr4(coldef_list),))
-                except Exception as ex:
-                    pass
+                except Exception:
+                    ...
             raise
         return context._results_gen()
 
@@ -297,11 +291,7 @@ def dev_test_new_schema_version(dbname, sqldb_dpath, sqldb_fname,
     TESTING_NEW_SQL_VERSION = version_current != version_next
     if TESTING_NEW_SQL_VERSION:
         print('[sql] ATTEMPTING TO TEST NEW SQLDB VERSION')
-        # devdb_list = ['PZ_MTEST', 'testdb1', 'testdb0', 'testdb2',
-        #               'testdb_dst2', 'emptydatabase']
-        # testing_newschmea = ut.is_developer() and dbname in devdb_list
         testing_newschmea = False
-        #ut.is_developer() and ibs.get_dbname() in ['PZ_MTEST', 'testdb1']
         if testing_newschmea:
             # Set to true until the schema module is good then continue tests
             # with this set to false
@@ -731,7 +721,7 @@ class SQLDatabaseController(object):
         the first item of params_iter must be a superkey (like a uuid),
 
         Does not add None values. Does not add duplicate values.
-        For each None input returns None ouptut.
+        For each None input returns None output.
         For each duplicate input returns existing rowid
 
         Args:
@@ -791,7 +781,6 @@ class SQLDatabaseController(object):
                           for x in superkey_paramx]
         # ADD_CLEANLY_2: PREFORM INPUT CHECKS
         # check which parameters are valid
-        #and not any(ut.flag_None_items(params))
         isvalid_list = [params is not None for params in params_list]
         # Check for duplicate inputs
         isunique_list = ut.flag_unique_items(list(zip(*superkey_lists)))
@@ -2222,13 +2211,13 @@ class SQLDatabaseController(object):
         """
         aid = 30
         db = ibs.staging
-        rowids = ut.flatten(ibs.get_review_rowids_from_single([aid]))
+        rowids = list(ub.flatten(ibs.get_review_rowids_from_single([aid])))
         tablename = 'reviews'
         exclude_columns = 'review_user_confidence review_user_identity'.split(' ')
         print(db.get_table_as_pandas(tablename, rowids, exclude_columns=exclude_columns))
 
         db = ibs.db
-        rowids = ut.flatten(ibs.get_annotmatch_rowids_from_aid([aid]))
+        rowids = list(ub.flatten(ibs.get_annotmatch_rowids_from_aid([aid])))
         tablename = 'annotmatch'
         exclude_columns = 'annotmatch_confidence annotmatch_posixtime_modified annotmatch_reviewer'.split(' ')
         print(db.get_table_as_pandas(tablename, rowids, exclude_columns=exclude_columns))
@@ -2240,7 +2229,7 @@ class SQLDatabaseController(object):
             exclude_columns=exclude_columns)
         import pandas as pd
         index = pd.Index(rowids, name='rowid')
-        df = pd.DataFrame(ut.dzip(column_names, column_list), index=index)
+        df = pd.DataFrame(ub.dzip(column_names, column_list), index=index)
         return df
 
     def get_table_column_data(db, tablename, columns=None, exclude_columns=[], rowids=None):
@@ -2300,7 +2289,7 @@ class SQLDatabaseController(object):
             >>> tablename = 'keypoint'
             >>> db = depc[tablename].db
             >>> table_def = db.make_json_table_definition(tablename)
-            >>> result = ('table_def = %s' % (ut.repr2(table_def, nl=True),))
+            >>> result = ('table_def = %s' % (ub.repr2(table_def, nl=True),))
             >>> print(result)
             table_def = {
                 'keypoint_rowid': 'INTEGER',
@@ -2648,11 +2637,11 @@ class SQLDatabaseController(object):
             if rowid_subsets is not None and tablename in rowid_subsets:
                 valid_rowids = set(rowid_subsets[tablename])
                 isvalid_list = [rowid in valid_rowids for rowid in old_rowid_list]
-                valid_old_rowid_list = ut.compress(old_rowid_list, isvalid_list)
-                valid_column_list_ = [ut.compress(col, isvalid_list)
+                valid_old_rowid_list = list(ub.compress(old_rowid_list, isvalid_list))
+                valid_column_list_ = [list(ub.compress(col, isvalid_list))
                                       for col in column_list_]
                 valid_extern_superkey_colval_list =  [
-                    ut.compress(col, isvalid_list)
+                    list(ub.compress(col, isvalid_list))
                     for col in extern_superkey_colval_list
                 ]
                 print(' * filtered number of rows from %d to %d.' % (
@@ -2795,7 +2784,6 @@ class SQLDatabaseController(object):
             >>> rowids = depc.get_rowids('notch', [1, 2, 3])
             >>> table = depc['notch']
             >>> db = table.db
-            >>> #ut.exec_funckw(db.get_table_csv, globals())
             >>> tablename = 'notch'
             >>> exclude_columns = []
             >>> csv_table = db.get_table_csv(tablename, exclude_columns, truncate=True)
@@ -2813,7 +2801,6 @@ class SQLDatabaseController(object):
 
         csv_table = ut.make_csv_table(column_list, column_lbls, header, comma_repl=';')
         csv_table = ut.ensure_unicode(csv_table)
-        #csv_table = ut.make_csv_table(column_list, column_lbls, header, comma_repl='<comma>')
         return csv_table
 
     def print_table_csv(db, tablename, exclude_columns=[], truncate=False):
@@ -2836,7 +2823,6 @@ class SQLDatabaseController(object):
             print(db.get_table_csv_header(tablename) + '\n')
 
     def view_db_in_external_reader(db):
-        import os
         known_readers = ['sqlitebrowser', 'sqliteman']
         sqlite3_reader = known_readers[0]
         sqlite3_db_fpath = db.get_fpath()
@@ -2928,7 +2914,5 @@ if __name__ == '__main__':
         python -m dtool_ibeis.sql_control
         python -m dtool_ibeis.sql_control --allexamples
     """
-    import multiprocessing
-    multiprocessing.freeze_support()  # for win32
-    import utool as ut  # NOQA
-    ut.doctest_funcs()
+    import xdoctest
+    xdoctest.doctest_module(__file__)
