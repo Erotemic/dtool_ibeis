@@ -463,7 +463,7 @@ class Config(ut.NiceRepr, ut.DictLike):
     def from_dict(cls, dict_, tablename=None):
         r"""
         Args:
-            dict_ (dict_):  a dictionary
+            dict_ (dict):  a dictionary
             tablename (None): (default = None)
 
         Returns:

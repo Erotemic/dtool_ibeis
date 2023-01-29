@@ -325,8 +325,8 @@ class SQLDatabaseController(object):
         """ Creates db and opens connection
 
         Args:
-            sqldb_dpath (unicode):  directory path string(default = '.')
-            sqldb_fname (unicode): (default = 'database.sqlite3')
+            sqldb_dpath (str):  directory path string(default = '.')
+            sqldb_fname (str): (default = 'database.sqlite3')
             text_factory (type): (default = unicode)
             inmemory (None): (default = None)
             fpath (str):  file path string(default = None)
@@ -727,19 +727,19 @@ class SQLDatabaseController(object):
         Args:
             tblname (str): table name to add into
 
-            colnames (tuple of strs): columns whos values are specified in params_iter
+            colnames (Tuple[str, ...]): of strs columns whos values are specified in params_iter
 
-            params_iter (iterable): an iterable of tuples where each tuple corresonds to a row
+            params_iter (Iterable): an iterable of tuples where each tuple corresonds to a row
 
-            get_rowid_from_superkey (func): function that tests if a row needs
+            get_rowid_from_superkey (callable): function that tests if a row needs
                 to be added. It should return None for any new rows to be inserted.
                 It should return the existing rowid if one exists
 
-            superkey_paramx (tuple of ints): indices of tuples in params_iter which
+            superkey_paramx (Tuple[int, ...]): indices of tuples in params_iter which
                 correspond to superkeys. defaults to (0,)
 
         Returns:
-            iterable: rowid_list_ -- list of newly added or previously added rowids
+            Iterable: rowid_list_ -- list of newly added or previously added rowids
 
         Example:
             >>> # ENABLE_DOCTEST
@@ -938,12 +938,12 @@ class SQLDatabaseController(object):
 
         Args:
             tblname (str): table name to get from
-            colnames (tuple of str): column names to grab from
-            id_iter (iterable): iterable of search keys
+            colnames (Tuple[str, ...]): column names to grab from
+            id_iter (Iterable): iterable of search keys
             id_colname (str): column to be used as the search key (default: rowid)
             eager (bool): use eager evaluation
             unpack_scalars (bool): default True
-            id_colname (bool): default False. Experimental feature that could result in a 10x speedup
+            assume_unique (bool): default False. Experimental feature that could result in a 10x speedup
 
         CommandLine:
             python -m dtool_ibeis.sql_control get
@@ -1866,7 +1866,7 @@ class SQLDatabaseController(object):
     def get_coldef_list(db, tablename):
         """
         Returns:
-            list of (str, str) : each tuple is (col_name, col_type)
+            List[Tuple[str, str]]: each tuple is (col_name, col_type)
         """
         column_list = db.get_columns(tablename)
 
@@ -2145,7 +2145,7 @@ class SQLDatabaseController(object):
             tablename (str): table name
 
         Returns:
-            column_list : list of tuples with format:
+            Any: column_list : list of tuples with format:
                 (
                     column_id  : id of the column
                     name       : the name of the column
@@ -2502,7 +2502,7 @@ class SQLDatabaseController(object):
         FINISHME
 
         Args:
-            db_src (SQLController): merge data from db_src into db
+            db_src (SQLDatabaseController): merge data from db_src into db
 
         CommandLine:
             python -m dtool_ibeis.sql_control --test-merge_databases_new:0

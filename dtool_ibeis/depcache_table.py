@@ -157,7 +157,7 @@ class _TableConfigHelper(object):
             rowid_list (list): native table rowids
 
         Returns:
-            parent_rowids (list of tuples): tuples of parent rowids
+            parent_rowids (List[Tuple]): tuples of parent rowids
 
         Example:
             >>> # TODO: Need a test that creates a table
@@ -176,7 +176,7 @@ class _TableConfigHelper(object):
             rowid_list (list): native table rowids
 
         Returns:
-            parent_rowids (list of tuples): tuples of parent rowids
+            parent_rowids (List[Tuple]): tuples of parent rowids
 
         Example:
             >>> # TODO: Need a test that creates a table
@@ -1524,7 +1524,7 @@ class _TableComputeHelper(object):
               parent_rowids, (and the root rowids?), and the config.
 
         Args:
-            parent_rowids (list of tuples) - list of tuples of rowids
+            parent_rowids (list[tuple]) - list of tuples of rowids
         """
         config_hashid = table.get_config_hashid([config_rowid])[0]
         prefix = table.tablename
@@ -1696,7 +1696,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         parent_tablenames (str): parent tables in depcache
         data_colnames (List[str]): columns produced by preproc_func
         data_coltypes (List[str]): column SQL types produced by preproc_func
-        preproc_func (func): worker function
+        preproc_func (callable): worker function
         vectorized (bool): by defaults it is assumed registered functions can
             process multiple inputs at once.
         taggable (bool): specifies if a computed object can be disconected from

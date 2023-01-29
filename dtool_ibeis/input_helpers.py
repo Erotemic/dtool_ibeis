@@ -812,7 +812,7 @@ def get_rootmost_inputs(exi_graph, table):
 
     Args:
         exi_graph (nx.Graph): made from make_expanded_input_graph(graph, target)
-        table (dtool_ibeis.Table):
+        table (Any): a Table
 
     CommandLine:
         python -m dtool_ibeis.input_helpers get_rootmost_inputs
