@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 # flake8: noqa
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from dtool_ibeis import __SQLITE__ as lite
 from dtool_ibeis import base
 from dtool_ibeis import sql_control
