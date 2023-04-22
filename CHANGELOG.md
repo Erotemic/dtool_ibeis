@@ -1,3 +1,10 @@
+
+## [Version 1.1.2] -
+
+### Fixed:
+* Removed codecov from test requirements
+
+
 ## Version 1.1.1 - Released 2023-01-29
 
 ### Changed
