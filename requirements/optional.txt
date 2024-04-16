@@ -1,2 +1,1 @@
-guitool_ibeis >= 2.1.2
-# plotool_ibeis >= 2.0.0
+guitool_ibeis >= 2.2.0

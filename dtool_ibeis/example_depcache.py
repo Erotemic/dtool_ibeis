@@ -208,7 +208,10 @@ def testdata_depc(fname=None):
 
     import dtool_ibeis
     import vtool_ibeis as vt
-    gpath_list = ut.lmap(ut.grab_test_imgpath, ut.get_valid_test_imgkeys(),
+    # imgkeys = ut.get_valid_test_imgkeys()
+    imgkeys = ['airport', 'amazon', 'astro', 'carl', 'lowcontrast', 'paraview',
+               'parrot', 'pm5644', 'stars', 'tsukuba_l', 'tsukuba_r']
+    gpath_list = ut.lmap(ut.grab_test_imgpath, imgkeys,
                          verbose=False)
 
     dummy_root = 'dummy_annot'
