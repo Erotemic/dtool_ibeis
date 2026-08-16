@@ -85,3 +85,18 @@ def test_direct_runtime_dependencies_are_declared():
         if line.strip() and not line.lstrip().startswith('#')
     }
     assert {'loguru', 'networkx', 'numpy', 'parse'} <= declared
+
+
+def test_internal_column_attr_lookup_preserves_missing_key_defaults():
+    """Mirror the missing-key behavior of ``ut.dict_take_column``."""
+    from dtool_ibeis.depcache_table import _TableGeneralHelper
+
+    data_col = {'intern_colname': 'value', 'isdata': True}
+    extra_col = {'intern_colname': 'parent_rowid', 'isextra': True}
+
+    class DummyTable(_TableGeneralHelper):
+        internal_col_attrs = [data_col, extra_col]
+
+    table = DummyTable()
+    assert table.get_intern_col_attr('isdata') == [True, None]
+    assert table.internal_data_col_attrs == [data_col]

@@ -193,7 +193,7 @@ def make_expanded_input_graph(graph, target):
         """
         edge_data = [row[3] for row in edge_list]
         # We are accumulating local input ids
-        toaccum_list_ = [row['local_input_id'] for row in edge_data]
+        toaccum_list_ = [row.get('local_input_id', None) for row in edge_data]
         if BIG_HACK and True:
             v_list = [row[1] for row in edge_list]
             # show the local_input_ids at the entire level

@@ -995,23 +995,23 @@ class _TableGeneralHelper(ub.NiceRepr):
 
     @ut.memoize
     def get_parent_col_attr(table, key):
-        return [row[key] for row in table.parent_col_attrs]
+        return [row.get(key, None) for row in table.parent_col_attrs]
 
     @ut.memoize
     def get_intern_data_col_attr(table, key):
-        return [row[key] for row in table.internal_data_col_attrs]
+        return [row.get(key, None) for row in table.internal_data_col_attrs]
 
     @ut.memoize
     def get_intern_parent_col_attr(table, key):
-        return [row[key] for row in table.internal_parent_col_attrs]
+        return [row.get(key, None) for row in table.internal_parent_col_attrs]
 
     @ut.memoize
     def get_intern_col_attr(table, key):
-        return [row[key] for row in table.internal_col_attrs]
+        return [row.get(key, None) for row in table.internal_col_attrs]
 
     @ut.memoize
     def get_data_col_attr(table, key):
-        return [row[key] for row in table.data_col_attrs]
+        return [row.get(key, None) for row in table.data_col_attrs]
 
     @property
     @ut.memoize
@@ -1427,7 +1427,7 @@ class _TableComputeHelper(object):
         writable_flags = [row.get('write_func', False) for row in internal_data_col_attrs]
         extern_colattrs = list(ub.compress(internal_data_col_attrs, writable_flags))
         #extern_colnames = ut.dict_take_column(extern_colattrs, 'colname')
-        extern_writers = [row['write_func'] for row in extern_colattrs]
+        extern_writers = [row.get('write_func', None) for row in extern_colattrs]
 
         nCols = len(internal_data_col_attrs)
         idxs1 = [i for i, flag in enumerate(writable_flags) if flag]
