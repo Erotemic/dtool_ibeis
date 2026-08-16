@@ -20,6 +20,7 @@ FIXME:
 
 
 """
+from loguru import logger
 import utool as ut
 import ubelt as ub
 import itertools as it
@@ -28,7 +29,6 @@ from os.path import join, exists
 from dtool_ibeis import __SQLITE__ as lite  # NOQA
 import networkx as nx
 import re
-(print, rrr, profile) = ut.inject2(__name__, '[depcache_table]')
 
 
 __docstubs__ = """
@@ -122,7 +122,6 @@ def make_extern_io_funcs(table, cls):
     return _read_func, _write_func
 
 
-@profile
 def ensure_config_table(db):
     """ SQL definition of configuration table. """
     config_addtable_kw = ut.odict(
@@ -154,7 +153,6 @@ def ensure_config_table(db):
                 raise NotImplementedError('Need to be able to modify tables')
 
 
-@ut.reloadable_class
 class _TableConfigHelper(object):
     """ helper for configuration table """
 
@@ -390,7 +388,6 @@ class _TableConfigHelper(object):
         return [None if dict_ is None else table.configclass(**dict_)
                 for dict_ in cfgdict_list]
 
-    #@profile
     def add_config(table, config, _debug=None):
         try:
             # assume config is AlgoRequest or TableConfig
@@ -399,8 +396,8 @@ class _TableConfigHelper(object):
             config_strid = ut.to_json(config)
         config_hashid = ut.hashstr27(config_strid)
         if table.depc._debug or _debug:
-            print('config_strid = %r' % (config_strid,))
-            print('config_hashid = %r' % (config_hashid,))
+            logger.info('config_strid = %r' % (config_strid,))
+            logger.info('config_hashid = %r' % (config_hashid,))
         get_rowid_from_superkey = table.get_config_rowid_from_hashid
         if STORE_CFGDICT:
             colnames = (CONFIG_HASHID, CONFIG_TABLENAME, CONFIG_STRID, CONFIG_DICT)
@@ -417,12 +414,11 @@ class _TableConfigHelper(object):
             get_rowid_from_superkey)
         config_rowid = config_rowid_list[0]
         if table.depc._debug:
-            print('config_rowid_list = %r' % (config_rowid_list,))
+            logger.info('config_rowid_list = %r' % (config_rowid_list,))
             #print('config_rowid = %r' % (config_rowid,))
         return config_rowid
 
 
-@ut.reloadable_class
 class _TableDebugHelper(object):
     """
     Contains printing and debug things
@@ -447,25 +443,25 @@ class _TableDebugHelper(object):
             >>> for table in ut.take(depc, tablenames): # .tables:
             >>>     table.print_internal_info()
         """
-        print('----')
-        print(table)
+        logger.info('----')
+        logger.info(table)
         # Print the other inferred attrs
-        print('table.parent_col_attrs = %s' % (
+        logger.info('table.parent_col_attrs = %s' % (
                 ut.repr3(table.parent_col_attrs, nl=2),))
-        print('table.data_col_attrs = %s' % (
+        logger.info('table.data_col_attrs = %s' % (
                   ut.repr3(table.data_col_attrs, nl=2),))
         # Print the inferred allcol attrs
         ut.cprint('table.internal_col_attrs = %s' %
                   (ut.repr3(table.internal_col_attrs, nl=1,
                             sorted_=False)), 'python')
         add_table_kw = table._get_addtable_kw()
-        print('table.add_table_kw = %s' % (ut.repr2(add_table_kw, nl=2),))
+        logger.info('table.add_table_kw = %s' % (ut.repr2(add_table_kw, nl=2),))
         table.print_sql_info()
         if all_attrs:
             # Print all attributes
             for a in ut.get_instance_attrnames(
                       table, with_properties=True, default=False):
-                print('  table.%s = %r' % (a, getattr(table, a)))
+                logger.info('  table.%s = %r' % (a, getattr(table, a)))
 
     def print_table(table, ):
         table.db.print_table_csv(table.tablename)
@@ -474,33 +470,33 @@ class _TableDebugHelper(object):
 
     def print_info(table, with_colattrs=True, with_graphattrs=True):
         """ debug function """
-        print('TABLE ATTRIBUTES')
-        print('table.tablename = %r' % (table.tablename,))
-        print('table.isinteractive = %r' % (table.isinteractive,))
-        print('table.default_onthefly = %r' % (table.default_onthefly,))
-        print('table.rm_extern_on_delete = %r' % (table.rm_extern_on_delete,))
-        print('table.chunksize = %r' % (table.chunksize,))
-        print('table.fname = %r' % (table.fname,))
-        print('table.docstr = %r' % (table.docstr,))
-        print('table.data_colnames = %r' % (table.data_colnames,))
-        print('table.data_coltypes = %r' % (table.data_coltypes,))
+        logger.info('TABLE ATTRIBUTES')
+        logger.info('table.tablename = %r' % (table.tablename,))
+        logger.info('table.isinteractive = %r' % (table.isinteractive,))
+        logger.info('table.default_onthefly = %r' % (table.default_onthefly,))
+        logger.info('table.rm_extern_on_delete = %r' % (table.rm_extern_on_delete,))
+        logger.info('table.chunksize = %r' % (table.chunksize,))
+        logger.info('table.fname = %r' % (table.fname,))
+        logger.info('table.docstr = %r' % (table.docstr,))
+        logger.info('table.data_colnames = %r' % (table.data_colnames,))
+        logger.info('table.data_coltypes = %r' % (table.data_coltypes,))
         if with_graphattrs:
-            print('TABLE GRAPH ATTRIBUTES')
-            print('table.children = %r' % (table.children,))
-            print('table.parent = %r' % (table.parent,))
-            print('table.configclass = %r' % (table.configclass,))
-            print('table.requestclass = %r' % (table.requestclass,))
+            logger.info('TABLE GRAPH ATTRIBUTES')
+            logger.info('table.children = %r' % (table.children,))
+            logger.info('table.parent = %r' % (table.parent,))
+            logger.info('table.configclass = %r' % (table.configclass,))
+            logger.info('table.requestclass = %r' % (table.requestclass,))
         if with_colattrs:
             nl = 1
-            print('TABEL COLUMN ATTRIBUTES')
-            print('table.data_col_attrs = %s' % (ut.repr3(table.data_col_attrs, nl=nl),))
-            print('table.parent_col_attrs = %s' % (ut.repr3(table.parent_col_attrs, nl=nl),))
-            print('table.internal_data_col_attrs = %s' % (ut.repr3(table.internal_data_col_attrs, nl=nl),))
-            print('table.internal_parent_col_attrs = %s' % (ut.repr3(table.internal_parent_col_attrs, nl=nl),))
-            print('table.internal_col_attrs = %s' % (ut.repr3(table.internal_col_attrs, nl=nl),))
+            logger.info('TABEL COLUMN ATTRIBUTES')
+            logger.info('table.data_col_attrs = %s' % (ut.repr3(table.data_col_attrs, nl=nl),))
+            logger.info('table.parent_col_attrs = %s' % (ut.repr3(table.parent_col_attrs, nl=nl),))
+            logger.info('table.internal_data_col_attrs = %s' % (ut.repr3(table.internal_data_col_attrs, nl=nl),))
+            logger.info('table.internal_parent_col_attrs = %s' % (ut.repr3(table.internal_parent_col_attrs, nl=nl),))
+            logger.info('table.internal_col_attrs = %s' % (ut.repr3(table.internal_col_attrs, nl=nl),))
 
     def print_schemadef(table):
-        print('\n'.join(table.db.get_table_autogen_str(table.tablename)))
+        logger.info('\n'.join(table.db.get_table_autogen_str(table.tablename)))
 
     def print_configs(table):
         """
@@ -523,18 +519,18 @@ class _TableDebugHelper(object):
             >>> table.print_configs()
         """
         text = table.db.get_table_csv(CONFIG_TABLE)
-        print(text)
+        logger.info(text)
 
     def print_csv(table, truncate=True):
-        print(table.db.get_table_csv(table.tablename, truncate=truncate))
+        logger.info(table.db.get_table_csv(table.tablename, truncate=truncate))
 
     def print_model_manifests(table):
-        print('manifests')
+        logger.info('manifests')
         rowids = table._get_all_rowids()
         uuids = table.get_model_uuid(rowids)
         for rowid, uuid in zip(rowids, uuids):
-            print('rowid = %r' % (rowid,))
-            print(ut.repr3(table.get_model_inputs(uuid), nl=1))
+            logger.info('rowid = %r' % (rowid,))
+            logger.info(ut.repr3(table.get_model_inputs(uuid), nl=1))
 
     def _assert_self(table):
         assert len(table.data_colnames) == len(table.data_coltypes), (
@@ -549,7 +545,7 @@ class _TableDebugHelper(object):
                     'varargs and kwargs must have one arg for depcache')
             else:
                 if len(args) < 3:
-                    print('args = %r' % (args,))
+                    logger.info('args = %r' % (args,))
                     msg = (
                         'preproc_func=%r for table=%s must have a '
                         'depcache arg, at least one parent rowid arg, '
@@ -558,10 +554,10 @@ class _TableDebugHelper(object):
                     raise AssertionError(msg)
                 rowid_args = args[1:-1]
                 if len(rowid_args) != len(table.parents()):
-                    print('table.preproc_func = %r' %
+                    logger.info('table.preproc_func = %r' %
                           (table.preproc_func,))
-                    print('args = %r' % (args,))
-                    print('rowid_args = %r' % (rowid_args,))
+                    logger.info('args = %r' % (args,))
+                    logger.info('rowid_args = %r' % (rowid_args,))
                     msg = (
                         ('preproc function for table=%s must have as many '
                          'rowids %d args as parent %d') % (
@@ -588,11 +584,9 @@ class _TableDebugHelper(object):
                 raise AssertionError(msg)
 
 
-@ut.reloadable_class
 class _TableInternalSetup(ub.NiceRepr):
     """ helper that sets up column information """
 
-    @profile
     def _infer_datacol(table):
         """
         Constructs the columns needed to represent relationship to data
@@ -703,7 +697,6 @@ class _TableInternalSetup(ub.NiceRepr):
             data_col_attrs.append(colattr)
         return data_col_attrs
 
-    @profile
     def _infer_parentcol(table):
         """
         construct columns to represent relationship to parent
@@ -819,7 +812,6 @@ class _TableInternalSetup(ub.NiceRepr):
             for colattr in parent_col_attrs]
         return parent_col_attrs
 
-    @profile
     def _infer_allcol(table):
         r"""
         Combine information from parentcol and datacol
@@ -935,7 +927,6 @@ class _TableInternalSetup(ub.NiceRepr):
         return internal_col_attrs
 
 
-@ut.reloadable_class
 class _TableGeneralHelper(ub.NiceRepr):
     """ helper """
 
@@ -1248,11 +1239,9 @@ class _TableGeneralHelper(ub.NiceRepr):
         return colnames
 
 
-@ut.reloadable_class
 class _TableComputeHelper(object):
     """ helper for computing functions """
 
-    #@profile
     def prepare_storage(table, dirty_parent_ids, proptup_gen,
                         dirty_preproc_args, config_rowid, config):
         """
@@ -1406,7 +1395,6 @@ class _TableComputeHelper(object):
                                            eager=True, nInput=len(model_uuid_list))
         return rowid_list
 
-    @ profile
     def _prepare_storage_nested(table, proptup_gen):
         """
         Hack for when a sql schema has tuples defined in it.
@@ -1430,7 +1418,6 @@ class _TableComputeHelper(object):
             data_new = tuple(ut.flatten(unflat))
             yield data_new
 
-    #@profile
     def _prepare_storage_extern(table, dirty_parent_ids, config_rowid,
                                 config, proptup_gen):
         """
@@ -1631,7 +1618,7 @@ class _TableComputeHelper(object):
         chunksize = nInput if table.chunksize is None else table.chunksize
 
         if verbose:
-            print('[deptbl.compute] nInput={}, chunksize={}, tbl={}'.format(
+            logger.info('[deptbl.compute] nInput={}, chunksize={}, tbl={}'.format(
                 nInput, table.chunksize, table.tablename))
 
         # Report computation progress
@@ -1682,7 +1669,6 @@ class _TableComputeHelper(object):
             raise
 
 
-@ut.reloadable_class
 class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                            _TableDebugHelper, _TableComputeHelper,
                            _TableConfigHelper):
@@ -1724,7 +1710,6 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         >>> print(depc['nnindexer'])
     """
 
-    @profile
     def __init__(table, depc=None, parent_tablenames=None, tablename=None,
                  data_colnames=None, data_coltypes=None, preproc_func=None,
                  docstr='no docstr', fname=None, asobject=False,
@@ -1784,7 +1769,6 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
 
         table._hack_chunk_cache = None
 
-    #@profile
     def initialize(table, _debug=None):
         """
         Ensures the SQL schema for this cache table
@@ -1793,7 +1777,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         #print('Checking sql for table=%r' % (table.tablename,))
         if not table.db.has_table(table.tablename):
             if _debug or ut.VERBOSE:
-                print('Initializing table=%r' % (table.tablename,))
+                logger.info('Initializing table=%r' % (table.tablename,))
             new_state = table._get_addtable_kw()
             table.db.add_table(**new_state)
         else:
@@ -1811,7 +1795,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                 current_state = table.db.get_table_autogen_dict(table.tablename)
 
             if current_state['coldef_list'] != new_state['coldef_list']:
-                print('WARNING TABLE IS MODIFIED')
+                logger.info('WARNING TABLE IS MODIFIED')
                 if predrop_grace_period(table.tablename):
                     table.clear_table()
                 else:
@@ -1861,7 +1845,6 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
     def number_of_rows(table):
         return table.db.get_row_count(table.tablename)
 
-    #@profile
     def ensure_rows(table, parent_ids_, preproc_args, config=None,
                     verbose=True, _debug=None):
         """
@@ -1894,9 +1877,9 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         initial_rowid_list = list(initial_rowid_list)
 
         if table.depc._debug:
-            print('[deptbl.ensure] initial_rowid_list = %s' %
+            logger.info('[deptbl.ensure] initial_rowid_list = %s' %
                   (ut.trunc_repr(initial_rowid_list),))
-            print('[deptbl.ensure] config_rowid = %r' % (config_rowid,))
+            logger.info('[deptbl.ensure] config_rowid = %r' % (config_rowid,))
 
         # Get corresponding "dirty" parent rowids
         isdirty_list = ut.flag_None_items(initial_rowid_list)
@@ -1906,9 +1889,9 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         if num_dirty > 0:
             with ut.Indenter('[ADD]', enabled=_debug):
                 if verbose or _debug:
-                    print('Add %d / %d new rows to %r' % (
+                    logger.info('Add %d / %d new rows to %r' % (
                         num_dirty, num_total, table.tablename,))
-                    print('[deptbl.add]  * config_rowid = {}, config={}'.format(
+                    logger.info('[deptbl.add]  * config_rowid = {}, config={}'.format(
                         config_rowid, str(config)))
 
                 dirty_parent_ids_  = ut.compress(parent_ids_, isdirty_list)
@@ -1930,9 +1913,9 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                         rowid_list = ut.take_column(parent_ids_, x)
                         try:
                             parent_history = parent_table.get_config_history(rowid_list)
-                            print('parent_history = %r' % (parent_history,))
+                            logger.info('parent_history = %r' % (parent_history,))
                         except KeyError:
-                            print('[depcache_table] WARNING: config history is having troubles... says Jon')
+                            logger.info('[depcache_table] WARNING: config history is having troubles... says Jon')
 
                 # Gives the function a hacky cache to use between chunks
                 table._hack_chunk_cache = {}
@@ -1949,7 +1932,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                 # Remove cache when main add is done
                 table._hack_chunk_cache = None
                 if verbose or _debug:
-                    print('[deptbl.add] finished add')
+                    logger.info('[deptbl.add] finished add')
                 #
                 # The requested data is clean and must now exist in the parent
                 # database, do a lookup to ensure the correct order.
@@ -1957,7 +1940,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         else:
             rowid_list = initial_rowid_list
         if _debug:
-            print('[deptbl.add] rowid_list = %s' % ut.trunc_repr(rowid_list))
+            logger.info('[deptbl.add] rowid_list = %s' % ut.trunc_repr(rowid_list))
         return rowid_list
 
     def _rectify_ids(table, parent_rowids):
@@ -2093,11 +2076,11 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         """
         _debug = table.depc._debug if _debug is None else _debug
         if _debug:
-            print('[deptbl.get_rowid] Get %s rowids via %d parent superkeys' %
+            logger.info('[deptbl.get_rowid] Get %s rowids via %d parent superkeys' %
                   (table.tablename, len(parent_rowids)))
             if _debug > 1:
-                print('[deptbl.get_rowid] config = %r' % (config,))
-                print('[deptbl.get_rowid] ensure = %r' % (ensure,))
+                logger.info('[deptbl.get_rowid] config = %r' % (config,))
+                logger.info('[deptbl.get_rowid] ensure = %r' % (ensure,))
 
         # Ensure inputs are in the correct format / remove Nones
         # Collapse multi-inputs into a UUID hash
@@ -2105,7 +2088,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         (parent_ids_, preproc_args, idxs1, idxs2) = rectify_tup
         # Do the getting / adding work
         if recompute:
-            print('REQUESTED RECOMPUTE')
+            logger.info('REQUESTED RECOMPUTE')
             # get existing rowids, delete them, recompute the request
             rowid_list_ = table._get_rowid(parent_ids_, config=config,
                                            eager=True, nInput=None,
@@ -2136,7 +2119,6 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                                           idxs2)
         return rowid_list
 
-    #@profile
     def _get_rowid(table, parent_ids_, config=None, eager=True, nInput=None,
                    _debug=None):
         """
@@ -2147,12 +2129,12 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         config_rowid = table.get_config_rowid(config=config)
         _debug = table.depc._debug if _debug is None else _debug
         if _debug:
-            print('_get_rowid')
-            print('_get_rowid table.tablename = %r ' % (table.tablename,))
-            print('_get_rowid parent_ids_ = %s' % (ut.trunc_repr(parent_ids_)))
-            print('_get_rowid config = %s' % (config))
-            print('_get_rowid table.rowid_colname = %s' % (table.rowid_colname))
-            print('_get_rowid config_rowid = %s' % (config_rowid))
+            logger.info('_get_rowid')
+            logger.info('_get_rowid table.tablename = %r ' % (table.tablename,))
+            logger.info('_get_rowid parent_ids_ = %s' % (ut.trunc_repr(parent_ids_)))
+            logger.info('_get_rowid config = %s' % (config))
+            logger.info('_get_rowid table.rowid_colname = %s' % (table.rowid_colname))
+            logger.info('_get_rowid config_rowid = %s' % (config_rowid))
         andwhere_colnames = table.superkey_colnames
         params_iter = (ids_ + (config_rowid,) for ids_ in parent_ids_)
         # TODO: make sure things that call this can accept a generator
@@ -2163,7 +2145,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                                            params_iter, andwhere_colnames,
                                            eager=eager, nInput=nInput)
         if _debug:
-            print('_get_rowid rowid_list = %s' % (ut.trunc_repr(rowid_list)))
+            logger.info('_get_rowid rowid_list = %s' % (ut.trunc_repr(rowid_list)))
         return rowid_list
 
     def clear_table(table):
@@ -2171,11 +2153,10 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         Deletes all data in this table
         """
         # TODO: need to clear one-to-one dependencies as well
-        print('Clearing data in %r' % (table,))
+        logger.info('Clearing data in %r' % (table,))
         table.db.drop_table(table.tablename)
         table.db.add_table(**table._get_addtable_kw())
 
-    #@profile
     def delete_rows(table, rowid_list, delete_extern=None, dry=False,
                     verbose=None):
         """
@@ -2221,10 +2202,10 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             verbose = False
         if ut.NOT_QUIET:
             if ut.VERBOSE:
-                print('Requested delete of %d rows from %s' % (
+                logger.info('Requested delete of %d rows from %s' % (
                     len(rowid_list), table.tablename))
                 if dry:
-                    print('Dry run')
+                    logger.info('Dry run')
             # print('delete_extern = %r' % (delete_extern,))
         depc = table.depc
 
@@ -2246,13 +2227,13 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             fpaths = [fpath for fpath in absuris if exists(fpath)]
             if delete_extern:
                 if ut.VERBOSE or len(fpaths) > 0:
-                    print('deleting {} existing internal files'.format(
+                    logger.info('deleting {} existing internal files'.format(
                         len(fpaths)))
                 if not dry:
                     ut.remove_fpaths(fpaths, verbose=verbose)
             else:
                 if ut.VERBOSE or len(fpaths) > 0:
-                    print('Leaving {} dangling filepaths'.format(len(fpaths)))
+                    logger.info('Leaving {} dangling filepaths'.format(len(fpaths)))
 
         # DELETE EXPLICITLY DEFINED CHILDREN
         # (TODO: handle implicit definitions)
@@ -2272,9 +2253,9 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
 
             if ut.VERBOSE:
                 if table.children:
-                    print('Deleting from %r children' % (len(table.children),))
+                    logger.info('Deleting from %r children' % (len(table.children),))
                 else:
-                    print('Table is a leaf node')
+                    logger.info('Table is a leaf node')
 
             for child in table.children:
                 child_table = table.depc[child]
@@ -2289,9 +2270,9 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         if ut.NOT_QUIET:
             non_none_rowids = ut.filter_Nones(rowid_list)
             if ut.VERBOSE or len(non_none_rowids) > 0:
-                print('Deleting %d non-None rows from %s' % (
+                logger.info('Deleting %d non-None rows from %s' % (
                     len(non_none_rowids), table.tablename))
-                print('...done!')
+                logger.info('...done!')
 
         # Finalize: Delete rows from this table
         if not dry:
@@ -2329,7 +2310,6 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         flat_intern_colnames = tuple(ut.flatten(intern_colnames))
         return nesting_xs, extern_resolve_tups, flat_intern_colnames
 
-    #@profile
     def get_row_data(table, tbl_rowids, colnames=None, _debug=None,
                      read_extern=True, num_retries=1, eager=True,
                      nInput=None, ensure=True, delete_on_fail=True,
@@ -2392,7 +2372,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         """
         _debug = table.depc._debug if _debug is None else _debug
         if _debug:
-            print(('Get col of tablename=%r, colnames=%r with '
+            logger.info(('Get col of tablename=%r, colnames=%r with '
                    'tbl_rowids=%s') % (table.tablename, colnames,
                                        ut.trunc_repr(tbl_rowids)))
         ####
@@ -2409,12 +2389,12 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             requested_colnames = colnames
 
         if _debug:
-            print('requested_colnames = %r' % (requested_colnames,))
+            logger.info('requested_colnames = %r' % (requested_colnames,))
         tup = table._resolve_requested_columns(requested_colnames)
         nesting_xs, extern_resolve_tups, flat_intern_colnames = tup
 
         if _debug:
-            print('[deptbl.get_row_data] flat_intern_colnames = %r' %
+            logger.info('[deptbl.get_row_data] flat_intern_colnames = %r' %
                   (flat_intern_colnames,))
 
         nonNone_flags = ut.flag_not_None_items(tbl_rowids)
@@ -2538,7 +2518,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
 
         for extern_colx, read_func in extern_resolve_tups:
             if _debug:
-                print('[deptbl.get_row_data] read_func = %r' % (read_func,))
+                logger.info('[deptbl.get_row_data] read_func = %r' % (read_func,))
             data_list = []
             failed_list = []
             for uri in prop_listT[extern_colx]:
@@ -2567,7 +2547,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
                 # rather than deleting the rowids.  Need the parent ids and
                 # config to do that.
                 failed_uris = ut.compress(prop_listT[extern_colx], failed_list)
-                print('Failed to read %s' % (ut.trunc_repr(failed_uris, maxlen=300)))
+                logger.info('Failed to read %s' % (ut.trunc_repr(failed_uris, maxlen=300)))
                 failed_rowids = ut.compress(nonNone_tbl_rowids, failed_list)
                 if delete_on_fail:
                     table._recompute_external_storage(failed_rowids)
@@ -2586,7 +2566,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         This DOES NOT modify the depcache internals.
         """
         assert STORE_CFGDICT
-        print('Recomputing external data (_recompute_external_storage)')
+        logger.info('Recomputing external data (_recompute_external_storage)')
         # TODO: need to rectify parent ids?
 
         parent_rowids = table.get_parent_rowids(tbl_rowids)
@@ -2613,7 +2593,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         This DOES modify the depcache internals.
         """
         assert STORE_CFGDICT
-        print('Recomputing external data (_recompute_and_store)')
+        logger.info('Recomputing external data (_recompute_and_store)')
         if len(tbl_rowids) == 0:
             return
         parent_rowids = table.get_parent_rowids(tbl_rowids)
@@ -2669,7 +2649,6 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
         #raw_prop_list = grouped_map(groupmap_func, groupxs, togroup_args,
         #                            unique_args_list)
 
-    #@profile
     def get_internal_columns(table, tbl_rowids, colnames=None, eager=True,
                              nInput=None, unpack_scalars=True, keepwrap=False,
                              showprog=False):

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function, unicode_literals
+from loguru import logger
 import re
 import functools
 import operator as op
 import utool as ut
 import numpy as np
 import copy
-(print, rrr, profile) = ut.inject2(__name__, '[depbase]')
 
 
 class StackedConfig(ut.DictLike, ut.HashComparable):
@@ -302,7 +302,7 @@ class Config(ut.NiceRepr, ut.DictLike):
                 name = val.get_config_name()
                 for key, val in val.parse_items():
                     if key in seen:
-                        print('[Config] WARNING: key=%r appears more than once' %
+                        logger.info('[Config] WARNING: key=%r appears more than once' %
                               (key,))
                     seen.add(key)
                     # Incorporate namespace
@@ -311,7 +311,7 @@ class Config(ut.NiceRepr, ut.DictLike):
                 pass
             else:
                 if key in seen:
-                    print('[Config] WARNING: key=%r appears more than once' %
+                    logger.info('[Config] WARNING: key=%r appears more than once' %
                           (key,))
                 seen.add(key)
                 # Incorporate namespace
@@ -382,14 +382,14 @@ class Config(ut.NiceRepr, ut.DictLike):
 
     def assert_self_types(cfg, verbose=True):
         if verbose:
-            print('Assert self types of cfg=%r' % (cfg,))
+            logger.info('Assert self types of cfg=%r' % (cfg,))
         pi_dict = cfg.get_param_info_dict()
         for key in cfg.keys():
             pi = pi_dict[key]
             value = cfg[key]
             pi.error_if_invalid_value(value)
         if verbose:
-            print('... checks passed')
+            logger.info('... checks passed')
 
     def getinfo(cfg, key):
         pass
@@ -673,7 +673,6 @@ def config_graph_subattrs(cfg, depc):
     subconfigs = ut.filter_Nones(subconfigs_)  # NOQA
 
 
-@ut.reloadable_class
 class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
     r"""
     Class that maintains both an algorithm, inputs, and a config.
@@ -828,7 +827,7 @@ class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
         # Load all results
         result_list = table.get_row_data(rowids)
         if postprocess and hasattr(request, 'postprocess_execute'):
-            print('Converting results')
+            logger.info('Converting results')
             result_list = request.postprocess_execute(parent_rowids, result_list)
             pass
         return result_list
@@ -863,7 +862,6 @@ class AnnotSimiliarity(object):
         return request._get_rootset_hashid(request.daids, 'D')
 
 
-@ut.reloadable_class
 class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
     r"""
     Similarity request for pairwise scores
@@ -923,7 +921,7 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
             # previously defined in execute subset
             #subparent_rowids = request.make_parent_rowids(
             #qaids, request.daids)
-            print('given %d specific parent_rowids' % (len(parent_rowids),))
+            logger.info('given %d specific parent_rowids' % (len(parent_rowids),))
 
         # vsone hack (i,j) same as (j,i)
         if request._symmetric:
@@ -946,7 +944,7 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
             result_list = ut.take(result_list, inverse_idx)
 
         if postprocess and hasattr(request, 'postprocess_execute'):
-            print('Converting results')
+            logger.info('Converting results')
             result_list = request.postprocess_execute(parent_rowids, result_list)
             pass
         return result_list
@@ -964,7 +962,6 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
         return '(%s) %s' % (dbname, infostr_)
 
 
-@ut.reloadable_class
 class VsManySimilarityRequest(BaseRequest, AnnotSimiliarity):
     r"""
     Request for one-vs-many simlarity
