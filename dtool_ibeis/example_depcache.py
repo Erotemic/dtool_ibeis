@@ -5,6 +5,7 @@ CommandLine:
     python -m dtool_ibeis.depcache_control --exec-make_graph --show
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
+import ubelt as ub
 import utool as ut
 import numpy as np
 import uuid
@@ -189,7 +190,7 @@ class DummyAnnotMatch(dtool_ibeis.MatchResult):
     pass
 
 
-class DummyVsOneMatch(dtool_ibeis.AlgoResult, ut.NiceRepr):
+class DummyVsOneMatch(dtool_ibeis.AlgoResult, ub.NiceRepr):
     def __init__(self):
         self.score = None
         self.qaid = None
@@ -210,13 +211,13 @@ def testdata_depc(fname=None):
     # imgkeys = ut.get_valid_test_imgkeys()
     imgkeys = ['airport', 'amazon', 'astro', 'carl', 'lowcontrast', 'paraview',
                'parrot', 'pm5644', 'stars', 'tsukuba_l', 'tsukuba_r']
-    gpath_list = ut.lmap(ut.grab_test_imgpath, imgkeys,
-                         verbose=False)
+    gpath_list = list(map(ut.grab_test_imgpath, imgkeys,
+                         verbose=False))
 
     dummy_root = 'dummy_annot'
 
     def get_root_uuid(aid_list):
-        return ut.lmap(ut.hashable_to_uuid, aid_list)
+        return list(map(ut.hashable_to_uuid, aid_list))
 
     # put the test cache in the dtool_ibeis repo
     dtool_repo = dirname(ut.get_module_dir(dtool_ibeis))
@@ -367,7 +368,7 @@ def testdata_depc(fname=None):
             import vtool_ibeis as vt
             from plottool_ibeis import interact_impaint
             mask_dpath = join(depc.cache_dpath, 'ManualChipMask')
-            ut.ensuredir(mask_dpath)
+            ub.ensuredir(mask_dpath)
             if config is None:
                 config = {}
             print('Requesting user defined chip mask')
@@ -390,14 +391,14 @@ def testdata_depc(fname=None):
         @depc.register_preproc(
             'spam', ['fgweight', 'chip', 'keypoint'],
             ['spam', 'eggs', 'size', 'uuid', 'vector', 'textdata'],
-            [str, int, (int, int), uuid.UUID, np.ndarray, ('extern', ut.readfrom)],
+            [str, int, (int, int), uuid.UUID, np.ndarray, ('extern', ub.readfrom)],
             docstr='I dont like spam',)
         def dummy_preproc_spam(depc, *args, **kwargs):
             config = kwargs.get('config', None)
             if config is None:
                 config = {}
             print('[preproc] Computing spam')
-            ut.writeto('tmp.txt', ut.lorium_ipsum())
+            ub.writeto('tmp.txt', ut.lorium_ipsum())
             for x in zip(*args):
                 size = (42, 21)
                 uuid = ut.get_zero_uuid()
@@ -499,7 +500,7 @@ def testdata_depc(fname=None):
                 yield (score, match, match.fm)
 
     # table = depc['spam']
-    # print(ut.repr2(table.get_addtable_kw(), nl=2))
+    # print(ub.repr2(table.get_addtable_kw(), nl=2))
     depc.initialize()
     # table.print_schemadef()
     # print(table.db.get_schema_current_autogeneration_str())

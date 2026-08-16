@@ -1,6 +1,7 @@
 """
 custom sqlite3 module that supports numpy types
 """
+from loguru import logger
 import sys
 import io
 import uuid
@@ -66,7 +67,7 @@ def REGISTER_SQLITE3_TYPES():
         try:
             return uuid.UUID(bytes_le=blob)
         except ValueError as ex:
-            ut.printex(ex, keys=['blob'])
+            logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'blob': blob})
             raise
             print('WARNING: COULD NOT PARSE UUID %r, GIVING RANDOM' % (blob, ))
             input('continue... [enter]')

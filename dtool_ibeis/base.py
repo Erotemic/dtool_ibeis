@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function, unicode_literals
+import ubelt as ub
 from loguru import logger
 import re
 import functools
@@ -22,11 +23,11 @@ class StackedConfig(ut.DictLike, ut.HashComparable):
             for cfg in self._orig_config_list
         ]
         # Parse out items
-        self._items = ut.flatten([
+        self._items = list(ub.flatten([
             list(cfg.parse_items()) if hasattr(cfg, 'parse_items') else
             list(cfg.items())
             for cfg in self._orig_config_list
-        ])
+        ]))
         for key, val in self._items:
             setattr(self, key, val)
         #self.keys = ut.flatten(list(cfg.keys()) for cfg in self.config_list)
@@ -37,7 +38,7 @@ class StackedConfig(ut.DictLike, ut.HashComparable):
         return cfgstr
 
     def keys(self):
-        return ut.take_column(self._items, 0)
+        return [row[0] for row in self._items]
 
     def __hash__(cfg):
         """ Needed for comparison operators """
@@ -51,7 +52,7 @@ class StackedConfig(ut.DictLike, ut.HashComparable):
 
 
 @functools.total_ordering
-class Config(ut.NiceRepr, ut.DictLike):
+class Config(ub.NiceRepr, ut.DictLike):
     r"""
     Base class for heirarchical config
     need to overwrite get_param_info_list
@@ -333,18 +334,18 @@ class Config(ut.NiceRepr, ut.DictLike):
             >>> from dtool_ibeis.example_depcache import DummyVsManyConfig
             >>> cfg = DummyVsManyConfig()
             >>> param_list = cfg.parse_items()
-            >>> result = ('param_list = %s' % (ut.repr2(param_list, nl=1),))
+            >>> result = ('param_list = %s' % (ub.repr2(param_list, nl=1),))
             >>> print(result)
         """
         namespace_param_list = cfg.parse_namespace_config_items()
-        param_names = ut.get_list_column(namespace_param_list, 1)
+        param_names = [row[1] for row in namespace_param_list]
         needs_namespace_keys = ut.find_duplicate_items(param_names)
-        param_list = ut.get_list_column(namespace_param_list, [1, 2])
+        param_list = [[row[col] for col in [1, 2]] for row in namespace_param_list]
         # prepend namespaces to variables that need it
-        for idx in ut.flatten(needs_namespace_keys.values()):
+        for idx in list(ub.flatten(needs_namespace_keys.values())):
             name = namespace_param_list[idx][0]
             param_list[idx][0] = name + '_' + param_list[idx][0]
-        duplicate_keys = ut.find_duplicate_items(ut.get_list_column(param_list, 0))
+        duplicate_keys = ut.find_duplicate_items([row[0] for row in param_list])
         # hack to let version through
         #import utool
         #with utool.embed_on_exception_context:
@@ -666,14 +667,14 @@ def config_graph_subattrs(cfg, depc):
     # full config belonging to both chip + feat
     # cfg = request.config.feat_cfg
     import networkx as netx
-    tablename = ut.invert_dict(depc.configclass_dict)[cfg.__class__]
+    tablename = ub.invert_dict(depc.configclass_dict)[cfg.__class__]
     #tablename = cfg.get_config_name()
     ancestors = netx.dag.ancestors(depc.graph, tablename)
-    subconfigs_ = ut.dict_take(depc.configclass_dict, ancestors, None)
-    subconfigs = ut.filter_Nones(subconfigs_)  # NOQA
+    subconfigs_ = [depc.configclass_dict.get(key, None) for key in ancestors]
+    subconfigs = [item for item in subconfigs_ if item is not None]  # NOQA
 
 
-class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
+class BaseRequest(IBEISRequestHacks, ub.NiceRepr):
     r"""
     Class that maintains both an algorithm, inputs, and a config.
     """
@@ -686,9 +687,9 @@ class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
                 if hasattr(cls, '_tablename'):
                     tablename = cls._tablename
                 else:
-                    tablename = ut.invert_dict(depc.requestclass_dict)[cls]
+                    tablename = ub.invert_dict(depc.requestclass_dict)[cls]
             except Exception as ex:
-                ut.printex(ex, 'tablename must be given')
+                logger.exception('tablename must be given')
                 raise
         request.tablename = tablename
         request.parent_rowids = parent_rowids
@@ -788,10 +789,9 @@ class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
         dependency_levels_ = ut.get_levels(from_root)
         dependency_levels = ut.longest_levels(dependency_levels_)
 
-        true_order = ut.flatten(dependency_levels)[1:-1]
+        true_order = list(ub.flatten(dependency_levels))[1:-1]
         #print('[req] Ensuring %s request dependencies: %r' % (request, true_order,))
-        ut.colorprint(
-            '[req] Ensuring request %s dependencies: %r' % (request, true_order,), 'yellow')
+        logger.info('[req] Ensuring request {} dependencies: {!r}', request, true_order)
         for tablename in true_order:
             table = depc[tablename]
             if table.ismulti:
@@ -815,10 +815,10 @@ class BaseRequest(IBEISRequestHacks, ut.NiceRepr):
         pass
 
     def execute(request, parent_rowids=None, use_cache=None, postprocess=True):
-        ut.colorprint('[req] Executing request %s' % (request,), 'yellow')
+        logger.info('[req] Executing request {}', request)
         table = request.depc[request.tablename]
         if use_cache is None:
-            use_cache = not ut.get_argflag('--nocache')
+            use_cache = not ub.argflag('--nocache')
         if parent_rowids is None:
             parent_rowids = request.parent_rowids
         # Compute and cache any uncomputed results
@@ -895,7 +895,6 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
     @classmethod
     def new(cls, depc, qaid_list, daid_list, cfgdict=None, tablename=None):
         parent_rowids = cls.make_parent_rowids(qaid_list, daid_list)
-        parent_rowids = list(ut.product_nonsame(qaid_list, daid_list))
         request = cls.static_new(cls, depc, parent_rowids, cfgdict, tablename)
         request.qaids = safeop(np.array, qaid_list)
         request.daids = safeop(np.array, daid_list)
@@ -903,18 +902,18 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
 
     @staticmethod
     def make_parent_rowids(qaid_list, daid_list):
-        return list(ut.product_nonsame(qaid_list, daid_list))
+        return [(qaid, daid) for qaid in qaid_list for daid in daid_list if qaid != daid]
 
     @property
     def parent_rowids_T(request):
-        return ut.list_transpose(request.parent_rowids)
+        return [list(col) for col in zip(*request.parent_rowids)]
 
     def execute(request, parent_rowids=None, use_cache=None, postprocess=True):
         """ HACKY REIMPLEMENTATION """
-        ut.colorprint('[req] Executing request %s' % (request,), 'yellow')
+        logger.info('[req] Executing request {}', request)
         table = request.depc[request.tablename]
         if use_cache is None:
-            use_cache = not ut.get_argflag('--nocache')
+            use_cache = not ub.argflag('--nocache')
         if parent_rowids is None:
             parent_rowids = request.parent_rowids
         else:
@@ -930,7 +929,7 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
             undirected_edges = to_undirected_edges(directed_edges)
             edge_ids = compute_unique_data_ids(undirected_edges)
             unique_rows, unique_rowx, inverse_idx = np.unique(edge_ids, return_index=True, return_inverse=True)
-            parent_rowids_ = ut.take(parent_rowids, unique_rowx)
+            parent_rowids_ = list(ub.take(parent_rowids, unique_rowx))
         else:
             parent_rowids_ = parent_rowids
 
@@ -941,7 +940,7 @@ class VsOneSimilarityRequest(BaseRequest, AnnotSimiliarity):
         result_list = table.get_row_data(rowids)
 
         if request._symmetric:
-            result_list = ut.take(result_list, inverse_idx)
+            result_list = list(ub.take(result_list, inverse_idx))
 
         if postprocess and hasattr(request, 'postprocess_execute'):
             logger.info('Converting results')
@@ -1064,7 +1063,7 @@ def safeop(op_, xs, *args, **kwargs):
     return None if xs is None else op_(xs, *args, **kwargs)
 
 
-class MatchResult(AlgoResult, ut.NiceRepr):
+class MatchResult(AlgoResult, ub.NiceRepr):
     def __init__(self, qaid=None, daids=None, qnid=None, dnid_list=None,
                  annot_score_list=None, unique_nids=None,
                  name_score_list=None):
