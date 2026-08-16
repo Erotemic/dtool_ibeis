@@ -87,16 +87,31 @@ def test_direct_runtime_dependencies_are_declared():
     assert {'loguru', 'networkx', 'numpy', 'parse'} <= declared
 
 
-def test_internal_column_attr_lookup_preserves_missing_key_defaults():
-    """Mirror the missing-key behavior of ``ut.dict_take_column``."""
-    from dtool_ibeis.depcache_table import _TableGeneralHelper
+def test_multi_parent_internal_data_columns_ignore_extra_metadata():
+    """Exercise the metadata path used by ``DependencyCacheTable.delete_rows``.
 
-    data_col = {'intern_colname': 'value', 'isdata': True}
-    extra_col = {'intern_colname': 'parent_rowid', 'isextra': True}
+    Multi-parent tables add an internal ``*_setsize`` column which is not a
+    data column and therefore intentionally has no ``isdata`` key.  Attribute
+    lookup must preserve the old ``dict_take_column`` missing-key semantics
+    rather than raising ``KeyError``.
+    """
+    from dtool_ibeis.depcache_table import DependencyCacheTable
 
-    class DummyTable(_TableGeneralHelper):
-        internal_col_attrs = [data_col, extra_col]
+    table = DependencyCacheTable(
+        depc=None,
+        parent_tablenames=['images*'],
+        tablename='thumbnails',
+        data_colnames=['value'],
+        data_coltypes=[int],
+        preproc_func=None,
+    )
 
-    table = DummyTable()
-    assert table.get_intern_col_attr('isdata') == [True, None]
-    assert table.internal_data_col_attrs == [data_col]
+    extra_cols = [row for row in table.internal_col_attrs if row.get('isextra')]
+    assert len(extra_cols) == 1
+    assert extra_cols[0]['intern_colname'] == 'images_setsize'
+    assert 'isdata' not in extra_cols[0]
+
+    # This is the first metadata lookup performed by delete_rows().  The IBEIS
+    # regression failed here while deleting image thumbnails.
+    assert table.get_intern_data_col_attr('intern_colname') == ['value']
+    assert table.get_intern_data_col_attr('is_external_pointer') == [None]
