@@ -1,8 +1,8 @@
+from loguru import logger
 import utool as ut
 import ubelt as ub
 import numpy as np
 import networkx as nx  # NOQA
-(print, rrr, profile) = ut.inject2(__name__, '[depc_input_helpers]')
 
 
 class BranchId(ut.HashComparable):
@@ -206,7 +206,7 @@ def make_expanded_input_graph(graph, target):
         return accum_ids
 
     sources = list(ut.nx_source_nodes(graph))
-    print(sources)
+    logger.info(sources)
     # assert len(sources) == 1, 'expected a unique source'
     source = sources[0]
 
@@ -430,7 +430,6 @@ def sort_rmi_list(rmi_list):
     return rmi_list
 
 
-@ut.reloadable_class
 class TableInput(ut.NiceRepr):
     """
     Specifies a set of inputs that can validly compute the output of a table in
