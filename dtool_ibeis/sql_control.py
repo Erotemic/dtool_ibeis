@@ -160,7 +160,7 @@ class SQLExecutionContext(object):
             logger.info('Reporting SQLite Error')
             logger.info('params = ' + ut.repr2(params, truncate=not ut.VERBOSE))
             ut.printex(ex, 'sql.Error', keys=['params'])
-            if hasattr(ex, 'message') and ex.message.find('probably unsupported type') > -1:
+            if 'probably unsupported type' in str(ex):
                 logger.info('ERR REPORT: given param types = ' + ut.repr2(ut.lmap(type, params)))
                 if context.tablename is None:
                     if context.operation_type.startswith('SELECT'):
@@ -273,7 +273,7 @@ def sanitize_sql(db, tablename_, columns=None):
                 return column_
 
         columns = [_sanitize_sql_helper(column) for column in columns]
-        columns = [column for column in columns if columns is not None]
+        columns = [column for column in columns if column is not None]
 
         return tablename, columns
 
@@ -1423,7 +1423,7 @@ class SQLDatabaseController(object):
             >>> operation = db._make_add_table_sqlstr(tablename, coldef_list)
             >>> print(operation)
         """
-        if len(coldef_list) == 0 or coldef_list is None:
+        if coldef_list is None or len(coldef_list) == 0:
             raise AssertionError('table %s is not given any columns' % (tablename,))
         bad_kwargs = set(metadata_keyval.keys()) - set(db.table_metadata_keys)
         assert len(bad_kwargs) == 0, (

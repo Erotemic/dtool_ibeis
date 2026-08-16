@@ -9,7 +9,6 @@ import utool as ut
 import numpy as np
 import uuid
 from os.path import join, dirname
-from six.moves import zip
 from dtool_ibeis import depcache_control
 import dtool_ibeis
 

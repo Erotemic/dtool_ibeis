@@ -1002,7 +1002,7 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
-    { name = "guitool-ibeis" },
+    { name = "guitool-ibeis", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
     { name = "opencv-python", marker = "python_full_version < '4'" },
     { name = "opencv-python-headless", marker = "python_full_version < '4'" },
 ]
@@ -1031,7 +1031,7 @@ headless = [
     { name = "opencv-python-headless", marker = "python_full_version < '4'" },
 ]
 optional = [
-    { name = "guitool-ibeis" },
+    { name = "guitool-ibeis", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
 ]
 tests = [
     { name = "coverage", version = "7.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1064,8 +1064,8 @@ requires-dist = [
     { name = "coverage", marker = "python_full_version == '3.8.*' and extra == 'tests'", specifier = ">=6.1.1" },
     { name = "coverage", marker = "python_full_version == '3.9.*' and extra == 'tests'", specifier = ">=5.3.1" },
     { name = "coverage", marker = "python_full_version >= '3.10' and extra == 'tests'", specifier = ">=6.1.1" },
-    { name = "guitool-ibeis", marker = "extra == 'all'", specifier = ">=2.2.0" },
-    { name = "guitool-ibeis", marker = "extra == 'optional'", specifier = ">=2.2.0" },
+    { name = "guitool-ibeis", marker = "(python_full_version < '3.14' or sys_platform != 'win32') and extra == 'all'", specifier = ">=2.2.0" },
+    { name = "guitool-ibeis", marker = "(python_full_version < '3.14' or sys_platform != 'win32') and extra == 'optional'", specifier = ">=2.2.0" },
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=0.18.0" },
     { name = "opencv-python", marker = "python_full_version == '3.9.*' and extra == 'all'", specifier = ">=3.4.15.55" },
     { name = "opencv-python", marker = "python_full_version == '3.9.*' and extra == 'graphics'", specifier = ">=3.4.15.55" },

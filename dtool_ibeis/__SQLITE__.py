@@ -6,7 +6,6 @@ import io
 import uuid
 import numpy as np
 import utool as ut
-ut.noinject(__name__, '[dtool_ibeis.__SQLITE__]')
 
 
 VERBOSE_SQL = '--veryverbose' in sys.argv or '--verbose' in sys.argv or '--verbsql' in sys.argv

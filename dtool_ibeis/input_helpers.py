@@ -54,13 +54,22 @@ class ExiNode(ut.HashComparable):
     __str__ = __repr__
 
 
+def _dependency_subgraph_for_target(graph, target):
+    """Return the dependency subgraph that can contribute to ``target``."""
+    if target not in graph:
+        raise KeyError('target {!r} is not in the dependency graph'.format(target))
+    relevant_nodes = nx.ancestors(graph, target)
+    relevant_nodes.add(target)
+    return graph.subgraph(relevant_nodes).copy()
+
+
 def make_expanded_input_graph(graph, target):
     """
     Starting from the `target` property we trace all possible paths in the
     `graph` back to all sources.
 
     Args:
-        graph (nx.DiMultiGraph): the dependency graph with a single source.
+        graph (nx.DiMultiGraph): the dependency graph.
         target (str): a single target node in graph
 
     Notes:
@@ -68,9 +77,9 @@ def make_expanded_input_graph(graph, target):
         type of edge it is: (eg one-to-many, one-to-one, nwise/multi).
 
         # Step 1: Extracting the Relevant Subgraph
-        We start by searching for all sources of the graph (we assume there is
-        only one). Then we extract the subgraph defined by all edges between
-        the sources and the target.  We augment this graph with a dummy super
+        We first restrict the graph to the target and all of its ancestors,
+        which discards disconnected dependency branches. Then we identify every
+        source in that relevant subgraph. We augment this graph with a dummy super
         source `s` and super sink `t`. This allows us to associate an edge with
         the real source and sink.
 
@@ -205,12 +214,11 @@ def make_expanded_input_graph(graph, target):
         ut.dict_set_column(edge_data, 'accum_id', accum_ids)
         return accum_ids
 
-    sources = list(ut.nx_source_nodes(graph))
+    # The full dependency graph may have multiple disconnected source branches.
+    # Restrict first, then connect every relevant source to the synthetic source.
+    graph = _dependency_subgraph_for_target(graph, target)
+    sources = sorted(ut.nx_source_nodes(graph))
     logger.info(sources)
-    # assert len(sources) == 1, 'expected a unique source'
-    source = sources[0]
-
-    graph = graph.subgraph(ut.nx_all_nodes_between(graph, source, target)).copy()
     # Remove superfluous data
     ut.nx_delete_edge_attr(graph, ['edge_type', 'isnwise',
                                    'nwise_idx',
@@ -230,7 +238,8 @@ def make_expanded_input_graph(graph, target):
     # Augment with dummy super source/sink nodes
     source_input = 'source_input'
     target_output = 'target_output'
-    graph.add_edge(source_input, source, local_input_id='s', taillabel='1')
+    for source in sources:
+        graph.add_edge(source_input, source, local_input_id='s', taillabel='1')
     graph.add_edge(target, target_output, local_input_id='t', taillabel='1')
 
     # Find all paths from the table to the source.
@@ -326,7 +335,6 @@ def recolor_exi_graph(exi_graph, rootmost_nodes):
         node_dict[node]['color'] = [1, 0, 0]
 
 
-#@ut.reloadable_class
 class RootMostInput(ut.HashComparable):
     def __init__(rmi, node, sink, exi_graph):
         rmi.node = node

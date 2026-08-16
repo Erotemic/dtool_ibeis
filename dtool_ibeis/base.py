@@ -523,7 +523,7 @@ class Config(ut.NiceRepr, ut.DictLike):
                 try:
                     val = val.getstate_todict_recursive()
                 except Exception:
-                    val = getstate_todict_recursive(val)  # NOQA
+                    val = Config.getstate_todict_recursive(val)
                 _dict2[key] = val
             else:
                 _dict2[key] = val

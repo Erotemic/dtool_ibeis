@@ -116,6 +116,7 @@ tags = [
   "purepy",
   "github",
   "cv2",
+  "notypes",
 ]
 mod_name = "dtool_ibeis"
 repo_name = "dtool_ibeis"

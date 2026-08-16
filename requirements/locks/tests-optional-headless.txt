@@ -20,7 +20,7 @@ contourpy==1.3.0 ; python_full_version < '3.10'
     # via matplotlib
 contourpy==1.3.2 ; python_full_version == '3.10.*'
     # via matplotlib
-contourpy==1.3.3 ; python_full_version >= '3.11' and python_full_version < '4'
+contourpy==1.3.3 ; (python_full_version >= '3.11' and python_full_version < '4' and sys_platform != 'win32') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform == 'win32')
     # via matplotlib
 coverage==7.10.7 ; python_full_version < '3.10'
     # via
@@ -30,19 +30,19 @@ coverage==7.15.4 ; python_full_version >= '3.10'
     # via
     #   dtool-ibeis
     #   pytest-cov
-cycler==0.12.1 ; python_full_version < '4'
+cycler==0.12.1 ; (python_full_version < '4' and sys_platform != 'win32') or (python_full_version < '3.14' and sys_platform == 'win32')
     # via matplotlib
 exceptiongroup==1.3.1 ; python_full_version < '3.11'
     # via pytest
 fonttools==4.60.2 ; python_full_version < '3.10'
     # via matplotlib
-fonttools==4.63.0 ; python_full_version >= '3.10' and python_full_version < '4'
+fonttools==4.63.0 ; (python_full_version >= '3.10' and python_full_version < '4' and sys_platform != 'win32') or (python_full_version >= '3.10' and python_full_version < '3.14' and sys_platform == 'win32')
     # via matplotlib
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.59
     # via utool
-guitool-ibeis==2.2.0
+guitool-ibeis==2.2.0 ; python_full_version < '3.14' or sys_platform != 'win32'
     # via dtool-ibeis
 idna==3.18
     # via requests
@@ -60,7 +60,7 @@ joblib==1.5.3 ; python_full_version < '4'
     # via scikit-learn
 kiwisolver==1.4.7 ; python_full_version < '3.10'
     # via matplotlib
-kiwisolver==1.5.0 ; python_full_version >= '3.10' and python_full_version < '4'
+kiwisolver==1.5.0 ; (python_full_version >= '3.10' and python_full_version < '4' and sys_platform != 'win32') or (python_full_version >= '3.10' and python_full_version < '3.14' and sys_platform == 'win32')
     # via matplotlib
 lazy-loader==0.5 ; python_full_version < '4'
     # via scikit-image
@@ -70,7 +70,7 @@ matplotlib==3.9.4 ; python_full_version < '3.10'
     # via guitool-ibeis
 matplotlib==3.10.9 ; python_full_version == '3.10.*'
     # via guitool-ibeis
-matplotlib==3.11.1 ; python_full_version >= '3.11' and python_full_version < '4'
+matplotlib==3.11.1 ; (python_full_version >= '3.11' and python_full_version < '4' and sys_platform != 'win32') or (python_full_version >= '3.11' and python_full_version < '3.14' and sys_platform == 'win32')
     # via guitool-ibeis
 narwhals==2.24.0 ; python_full_version >= '3.11' and python_full_version < '4'
     # via scikit-learn
@@ -193,13 +193,13 @@ pyparsing==3.3.2
     # via
     #   matplotlib
     #   utool
-pyqt5==5.15.11 ; python_full_version < '4'
+pyqt5==5.15.11 ; (python_full_version < '4' and sys_platform != 'win32') or (python_full_version < '3.14' and sys_platform == 'win32')
     # via guitool-ibeis
-pyqt5-qt5==5.15.19 ; python_full_version < '4'
+pyqt5-qt5==5.15.19 ; (python_full_version < '4' and sys_platform != 'win32') or (python_full_version < '3.14' and sys_platform == 'win32')
     # via pyqt5
 pyqt5-sip==12.17.1 ; python_full_version < '3.10'
     # via pyqt5
-pyqt5-sip==12.19.0 ; python_full_version >= '3.10' and python_full_version < '4'
+pyqt5-sip==12.19.0 ; (python_full_version >= '3.10' and python_full_version < '4' and sys_platform != 'win32') or (python_full_version >= '3.10' and python_full_version < '3.14' and sys_platform == 'win32')
     # via pyqt5
 pytest==8.4.2 ; python_full_version < '3.10'
     # via
