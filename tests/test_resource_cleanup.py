@@ -4,22 +4,34 @@ import sqlite3
 import pytest
 
 
-def test_testdata_depc_closes_sqlite_connections_when_collected():
-    """Legacy doctest depcaches should not leak SQLite connections."""
+def test_testdata_depc_database_survives_temporary_owner_collection():
+    """Escaping a DB from a temporary depcache must not close it."""
+    from dtool_ibeis.example_depcache import testdata_depc
+
+    db = testdata_depc(fname=':memory:')['notch'].db
+    try:
+        # This mirrors doctests such as ``db = testdata_depc()['notch'].db``.
+        # Collect the temporary DependencyCache aggressively; the escaped DB
+        # must remain live until its own owner closes it explicitly.
+        gc.collect()
+        db.connection.execute('SELECT 1')
+        metadata_items = db.get_metadata_items()
+        assert metadata_items
+    finally:
+        db.close()
+
+
+def test_testdata_depc_explicit_close_closes_sqlite_connection():
+    """The owning DependencyCache provides deterministic DB cleanup."""
     from dtool_ibeis.example_depcache import testdata_depc
 
     depc = testdata_depc(fname=':memory:')
     db = depc.fname_to_db[':memory:']
     connection = db.connection
-    cleanup = depc._test_cleanup
 
     connection.execute('SELECT 1')
-    assert cleanup.alive
+    depc.close()
 
-    del depc
-    gc.collect()
-
-    assert not cleanup.alive
     with pytest.raises(sqlite3.ProgrammingError):
         connection.execute('SELECT 1')
 
