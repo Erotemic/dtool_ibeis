@@ -6,6 +6,7 @@ CommandLine:
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
 import tempfile
+import weakref
 import ubelt as ub
 import utool as ut
 import numpy as np
@@ -30,6 +31,17 @@ if False:
         print('Requesting global dummy ')
         for rowid in parent_rowids:
             yield 'dummy'
+
+
+def _close_test_databases(fname_to_db):
+    """Close databases owned by a test dependency cache.
+
+    The finalizer must not capture the DependencyCache itself, otherwise the
+    bound reference would keep the object alive and prevent finalization.
+    """
+    for db in list(fname_to_db.values()):
+        if db is not None:
+            db.close()
 
 
 class DummyKptsConfig(dtool_ibeis.Config):
@@ -234,6 +246,12 @@ def testdata_depc(fname=None, cache_dpath=None):
         get_root_uuid=get_root_uuid,
         #root_asobject=root_asobject,
         use_globals=False)
+    # Legacy doctests usually let this test depcache fall out of scope instead
+    # of closing it explicitly. Capture only the mutable database mapping:
+    # using depc.close as the callback would keep depc alive. Register before
+    # initialization so partially initialized databases are covered as well.
+    depc._test_cleanup = weakref.finalize(
+        depc, _close_test_databases, depc.fname_to_db)
 
     @depc.register_preproc(tablename='chip', parents=[dummy_root],
                            colnames=['size', 'chip'],
