@@ -5,11 +5,12 @@ CommandLine:
     python -m dtool_ibeis.depcache_control --exec-make_graph --show
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
+import tempfile
 import ubelt as ub
 import utool as ut
 import numpy as np
 import uuid
-from os.path import join, dirname
+from os.path import join
 from dtool_ibeis import depcache_control
 import dtool_ibeis
 
@@ -201,7 +202,7 @@ class DummyVsOneMatch(dtool_ibeis.AlgoResult, ub.NiceRepr):
         return ('(%d-vs-%d) %.2f' % (self.qaid, self.daid, self.score))
 
 
-def testdata_depc(fname=None):
+def testdata_depc(fname=None, cache_dpath=None):
     """
     Example of local registration
     """
@@ -221,9 +222,11 @@ def testdata_depc(fname=None):
     def get_root_uuid(aid_list):
         return list(map(ut.hashable_to_uuid, aid_list))
 
-    # put the test cache in the dtool_ibeis repo
-    dtool_repo = dirname(ut.get_module_dir(dtool_ibeis))
-    cache_dpath = join(dtool_repo, 'DEPCACHE')
+    # Keep mutable test databases isolated from installed packages and from
+    # other doctest invocations.  In particular, a shared site-packages cache
+    # can retain stale or invalid SQLite files between Windows CI jobs.
+    if cache_dpath is None:
+        cache_dpath = tempfile.mkdtemp(prefix='dtool_ibeis-depcache-')
 
     depc = dtool_ibeis.DependencyCache(
         root_tablename=dummy_root, default_fname=fname,
