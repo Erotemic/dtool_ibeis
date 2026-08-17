@@ -159,10 +159,10 @@ class SQLExecutionContext(object):
             context.cur.execute(context.operation, params)
         except lite.Error as ex:
             logger.info('Reporting SQLite Error')
-            logger.info('params = ' + ub.repr2(params, truncate=not ut.VERBOSE))
+            logger.info('params = ' + ut.repr2(params, truncate=not ut.VERBOSE))
             logger.exception('sql.Error' + ' | context={!r}', {'params': params})
             if 'probably unsupported type' in str(ex):
-                logger.info('ERR REPORT: given param types = ' + ub.repr2(list(map(type, params))))
+                logger.info('ERR REPORT: given param types = ' + ut.repr2(list(map(type, params))))
                 if context.tablename is None:
                     if context.operation_type.startswith('SELECT'):
                         tablename = ut.str_between(context.operation, 'FROM', 'WHERE').strip()
@@ -1826,7 +1826,7 @@ class SQLDatabaseController(object):
         line_list.append('# Schema Version Current')
         line_list.append('# =======================')
         line_list.append('\n')
-        line_list.append('VERSION_CURRENT = %s' % ub.repr2(db_version_current))
+        line_list.append('VERSION_CURRENT = %s' % ut.repr2(db_version_current))
         line_list.append('\n')
         line_list.append('def update_current(db, ibs=None):')
         # Function content
@@ -1939,17 +1939,17 @@ class SQLDatabaseController(object):
         line_list = []
         tab1 = ' ' * 4
         tab2 = ' ' * 8
-        line_list.append(tab1 + 'db.add_table(%s, [' % (ub.repr2(tablename),))
+        line_list.append(tab1 + 'db.add_table(%s, [' % (ut.repr2(tablename),))
         # column_list = db.get_columns(tablename)
-        # colnamerepr_list = [ub.repr2(str(column[1]))
+        # colnamerepr_list = [ut.repr2(str(column[1]))
         #                     for column in column_list]
         autogen_dict = db.get_table_autogen_dict(tablename)
         coldef_list = autogen_dict['coldef_list']
         max_colsize = max(32, 2 + max(map(len, [row[0] for row in coldef_list])))
         # for column, colname_repr in zip(column_list, colnamerepr_list):
         for col_name, col_type in coldef_list:
-            name_part = ('%s,' % ub.repr2(col_name)).ljust(max_colsize)
-            type_part = ub.repr2(col_type)
+            name_part = ('%s,' % ut.repr2(col_name)).ljust(max_colsize)
+            type_part = ut.repr2(col_type)
             line_list.append(tab2 + '(%s%s),' % (name_part, type_part,))
         line_list.append(tab1 + '],')
         superkeys = db.get_table_superkey_colnames(tablename)
@@ -1968,7 +1968,7 @@ class SQLDatabaseController(object):
             quoted_docstr = _TSQ + '\n' + indented_docstr + '\n' + tab2 + _TSQ
             return quoted_docstr
         line_list.append(tab2 + 'docstr=%s,' % quote_docstr(docstr))
-        line_list.append(tab2 + 'superkeys=%s,' % (ub.repr2(superkeys), ))
+        line_list.append(tab2 + 'superkeys=%s,' % (ut.repr2(superkeys), ))
         # Hack out docstr and superkeys for now
         for suffix in db.table_metadata_keys:
             if suffix in specially_handled_table_metakeys:
@@ -1977,11 +1977,11 @@ class SQLDatabaseController(object):
             val = db.get_metadata_val(key, eval_=True, default=None)
             logger.info(key)
             if val is not None:
-                line_list.append(tab2 + '%s=%s,' % (suffix, ub.repr2(val)))
+                line_list.append(tab2 + '%s=%s,' % (suffix, ut.repr2(val)))
         # FIXME: are we depricating dependsmap?
         dependsmap = db.get_metadata_val(tablename + '_dependsmap', eval_=True, default=None)
         if dependsmap is not None:
-            _dictstr = ub.indent(ub.repr2(dependsmap, nl=1), tab2)
+            _dictstr = ub.indent(ut.repr2(dependsmap, nl=1), tab2)
             depends_map_dictstr = ut.align(_dictstr.lstrip(' '), ':')
             # hack for formatting
             depends_map_dictstr = depends_map_dictstr.replace(tab1 + '}', '}')
@@ -2055,7 +2055,7 @@ class SQLDatabaseController(object):
             >>> depc = testdata_depc()
             >>> db = depc['chip'].db
             >>> superkeys = db.get_table_superkey_colnames('chip')
-            >>> result = ub.repr2(superkeys, nl=False)
+            >>> result = ut.repr2(superkeys, nl=False)
             >>> print(result)
             [('dummy_annot_rowid', 'config_rowid')]
         """
@@ -2157,7 +2157,7 @@ class SQLDatabaseController(object):
             >>> tablename = 'keypoint'
             >>> db = depc[tablename].db
             >>> colrichinfo_list = db.get_columns(tablename)
-            >>> result = ('colrichinfo_list = %s' % (ub.repr2(colrichinfo_list, nl=1),))
+            >>> result = ('colrichinfo_list = %s' % (ut.repr2(colrichinfo_list, nl=1),))
             >>> print(result)
             colrichinfo_list = [
                 (0, 'keypoint_rowid', 'INTEGER', 0, None, 1),
@@ -2448,14 +2448,21 @@ class SQLDatabaseController(object):
                                         raise NotImplementedError(
                                             'Cannot Handle: len(superkeys) == 0. '
                                             'Probably a degenerate case')
-                            except Exception as ex:
-                                logger.exception('Error Getting superkey colnames' + ' | context={!r}', {'tablename_': tablename_, 'superkeys': superkeys})
+                            except Exception:
+                                logger.exception(
+                                    'Error getting superkey colnames for table={!r}',
+                                    tablename_,
+                                )
                                 raise
                             return superkey_colnames
                         try:
                             extern_superkey_colnames = get_standard_superkey_colnames(extern_tablename)
-                        except Exception as ex:
-                            logger.exception('Error Building Transferdata' + ' | context={!r}', {'tablename_': tablename_, 'dependtup': dependtup})
+                        except Exception:
+                            logger.exception(
+                                'Error building transfer data for table={!r}, dependency={!r}',
+                                extern_tablename,
+                                dependtup,
+                            )
                             raise
                         # INFER SUPERKEY COLNAMES
                     colx = ut.listfind(column_names, colname)

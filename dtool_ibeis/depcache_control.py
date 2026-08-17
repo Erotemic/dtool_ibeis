@@ -286,8 +286,10 @@ class _CoreDependencyCache(object):
             dependency_levels_ = ut.get_levels(from_root)
             dependency_levels = ut.longest_levels(dependency_levels_)
             dependency_levels = list(map(sorted, dependency_levels))
-        except Exception as ex:
-            logger.exception('error getting dependencies' + ' | context={!r}', {'tablename': tablename, 'root': root, 'children_to_parents': children_to_parents, 'to_root': to_root, 'from_root': from_root, 'dependency_levels_': dependency_levels_, 'dependency_levels': dependency_levels})
+        except Exception:
+            logger.exception(
+                'error getting dependencies for tablename={!r}', tablename
+            )
             raise
 
         return dependency_levels
@@ -455,7 +457,7 @@ class _CoreDependencyCache(object):
             compute_edges = exi_inputs.flat_compute_rmi_edges()
             if _debug:
                 logger.info(' * rectified_input=%s' % ut.trunc_repr(rectified_input))
-                logger.info(' * compute_edges=%s' % ub.repr2(compute_edges, nl=2))
+                logger.info(' * compute_edges=%s' % ut.repr2(compute_edges, nl=2))
 
             for count, (input_nodes, output_node) in enumerate(compute_edges, start=1):
                 if _debug:
@@ -661,7 +663,7 @@ class _CoreDependencyCache(object):
             >>> root_rowids = aids
             >>> prop_list = depc.get(
             >>>     tablename, root_rowids, colnames)
-            >>> result = ('prop_list = %s' % (ub.repr2(prop_list),))
+            >>> result = ('prop_list = %s' % (ut.repr2(prop_list),))
             >>> print(result)
             prop_list = [('labeler([root(1)]:42)',), ('labeler([root(2)]:42)',), ('labeler([root(3)]:42)',)]
 
@@ -680,7 +682,7 @@ class _CoreDependencyCache(object):
             >>> root_rowids = [aids]
             >>> prop_list = depc.get(
             >>>     tablename, root_rowids, colnames, config)
-            >>> result = ('prop_list = %s' % (ub.repr2(prop_list),))
+            >>> result = ('prop_list = %s' % (ut.repr2(prop_list),))
             >>> print(result)
             prop_list = [('vocab([root(1;2;3)]:42)',)]
 
@@ -1486,7 +1488,7 @@ class DependencyCache(_CoreDependencyCache, ub.NiceRepr):
             >>> config = {}
             >>> stacked_config = depc.stacked_config(source, dest, config)
             >>> cfgstr = stacked_config.get_cfgstr()
-            >>> result = ('cfgstr = %s' % (ub.repr2(cfgstr),))
+            >>> result = ('cfgstr = %s' % (ut.repr2(cfgstr),))
             >>> print(result)
         """
         if config is None:

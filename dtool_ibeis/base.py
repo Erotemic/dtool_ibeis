@@ -334,7 +334,7 @@ class Config(ub.NiceRepr, ut.DictLike):
             >>> from dtool_ibeis.example_depcache import DummyVsManyConfig
             >>> cfg = DummyVsManyConfig()
             >>> param_list = cfg.parse_items()
-            >>> result = ('param_list = %s' % (ub.repr2(param_list, nl=1),))
+            >>> result = ('param_list = %s' % (ut.repr2(param_list, nl=1),))
             >>> print(result)
         """
         namespace_param_list = cfg.parse_namespace_config_items()

@@ -647,7 +647,7 @@ class TableInput(ub.NiceRepr):
             >>> depc = testdata_depc4()
             >>> inputs = depc['feat'].rootmost_inputs.total_expand()
             >>> flat_compute_order = inputs.flat_compute_order()
-            >>> result = ub.repr2(flat_compute_order)
+            >>> result = ut.repr2(flat_compute_order)
             ...
             >>> print(result)
             [chip[t, t:1, 1:1], probchip[t, t:1, 1:1], feat[t, t:1]]

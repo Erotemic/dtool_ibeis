@@ -45,7 +45,6 @@ RETIRED_UTOOL_HELPERS = {
     'print_traceback',
     'product_nonsame',
     'readfrom',
-    'repr2',
     'setdiff',
     'take',
     'take_column',
@@ -115,3 +114,21 @@ def test_multi_parent_internal_data_columns_ignore_extra_metadata():
     # regression failed here while deleting image thumbnails.
     assert table.get_intern_data_col_attr('intern_colname') == ['value']
     assert table.get_intern_data_col_attr('is_external_pointer') == [None]
+
+
+def test_builtin_map_calls_do_not_receive_keyword_arguments():
+    """Catch invalid mechanical conversions from helpers such as ``ut.lmap``."""
+    root = Path(__file__).parents[1] / 'dtool_ibeis'
+    bad_calls = []
+    for fpath in root.rglob('*.py'):
+        tree = ast.parse(fpath.read_text(), filename=str(fpath))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == 'map'
+                and node.keywords
+            ):
+                bad_calls.append((str(fpath), node.lineno))
+    assert not bad_calls, 'builtin map() cannot accept keywords: {!r}'.format(bad_calls)
+

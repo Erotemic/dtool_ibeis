@@ -211,8 +211,10 @@ def testdata_depc(fname=None):
     # imgkeys = ut.get_valid_test_imgkeys()
     imgkeys = ['airport', 'amazon', 'astro', 'carl', 'lowcontrast', 'paraview',
                'parrot', 'pm5644', 'stars', 'tsukuba_l', 'tsukuba_r']
-    gpath_list = list(map(ut.grab_test_imgpath, imgkeys,
-                         verbose=False))
+    gpath_list = [
+        ut.grab_test_imgpath(imgkey, verbose=False)
+        for imgkey in imgkeys
+    ]
 
     dummy_root = 'dummy_annot'
 
@@ -500,7 +502,7 @@ def testdata_depc(fname=None):
                 yield (score, match, match.fm)
 
     # table = depc['spam']
-    # print(ub.repr2(table.get_addtable_kw(), nl=2))
+    # print(ut.repr2(table.get_addtable_kw(), nl=2))
     depc.initialize()
     # table.print_schemadef()
     # print(table.db.get_schema_current_autogeneration_str())

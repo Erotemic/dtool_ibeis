@@ -455,7 +455,7 @@ class _TableDebugHelper(object):
         logger.info('table.internal_col_attrs = {}',
                     ut.repr3(table.internal_col_attrs, nl=1, sorted_=False))
         add_table_kw = table._get_addtable_kw()
-        logger.info('table.add_table_kw = %s' % (ub.repr2(add_table_kw, nl=2),))
+        logger.info('table.add_table_kw = %s' % (ut.repr2(add_table_kw, nl=2),))
         table.print_sql_info()
         if all_attrs:
             # Print all attributes
@@ -717,7 +717,7 @@ class _TableInternalSetup(ub.NiceRepr):
             >>> table = depc['neighbs']
             >>> table = depc['indexer']
             >>> parent_col_attrs = table._infer_parentcol()
-            >>> result = ('parent_col_attrs = %s' % (ub.repr2(parent_col_attrs, nl=2),))
+            >>> result = ('parent_col_attrs = %s' % (ut.repr2(parent_col_attrs, nl=2),))
             >>> print(result)
 
         Ignore:
@@ -1184,7 +1184,7 @@ class _TableGeneralHelper(ub.NiceRepr):
             >>> table = depc[tablename]
             >>> inputs = table.rootmost_inputs
             >>> result = ('inputs = %s' % (inputs,))
-            >>> print('compute_order = %s' % (ub.repr2(inputs.flat_compute_rmi_edges(), nl=1)))
+            >>> print('compute_order = %s' % (ut.repr2(inputs.flat_compute_rmi_edges(), nl=1)))
             ......
             >>> print(result)
             inputs = <TableInput [annot[t], vocab[t], inv_index[t]]>
@@ -1342,8 +1342,12 @@ class _TableComputeHelper(object):
                                data_cols + parent_extra)
                     #print('row_tup = %r' % (row_tup,))
                     yield row_tup
-            except Exception as ex:
-                logger.exception('cat error' + ' | context={!r}', {'config_rowid': config_rowid, 'data_cols': data_cols, 'parent_rowids': parent_rowids})
+            except Exception:
+                logger.exception(
+                    'error preparing storage for table={!r}, config_rowid={!r}',
+                    table.tablename,
+                    config_rowid,
+                )
                 raise
 
     def get_model_manifest_fname(table, model_uuid):
@@ -1660,8 +1664,12 @@ class _TableComputeHelper(object):
                 dirty_params_iter = [item for item in dirty_params_iter if item is not None]
                 nChunkInput = len(dirty_params_iter)
                 yield colnames, dirty_params_iter, nChunkInput
-        except Exception as ex:
-            logger.exception('error in add_rowids' + ' | context={!r}', {'table': table, 'config': config, 'argsT': argsT, 'config_rowid': config_rowid, 'dirty_parent_ids': dirty_parent_ids})
+        except Exception:
+            logger.exception(
+                'error computing rows for table={!r}, config_rowid={!r}',
+                table.tablename,
+                config_rowid,
+            )
             raise
 
 
@@ -1813,8 +1821,8 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             >>> table2 = depc['neighbs']
             >>> add_table_kw1 = table1._get_addtable_kw()
             >>> add_table_kw2 = table2._get_addtable_kw()
-            >>> result1 = ('%s.add_table_kw = %s' % (table1.tablename, ub.repr2(add_table_kw1, nl=2),))
-            >>> result2 = ('%s.add_table_kw = %s' % (table2.tablename, ub.repr2(add_table_kw2, nl=2),))
+            >>> result1 = ('%s.add_table_kw = %s' % (table1.tablename, ut.repr2(add_table_kw1, nl=2),))
+            >>> result2 = ('%s.add_table_kw = %s' % (table2.tablename, ut.repr2(add_table_kw2, nl=2),))
             >>> print(result1)
             >>> print(result2)
         """
@@ -2335,7 +2343,7 @@ class DependencyCacheTable(_TableGeneralHelper, _TableInternalSetup,
             >>> kwargs = dict(read_extern=True, num_retries=1, _debug=True)
             >>> prop_list = table.get_row_data(tbl_rowids, colnames, **kwargs)
             >>> prop_list0 = ut.take_column(prop_list, [0, 1, 2]) # data subset
-            >>> result = (ub.repr2(prop_list0, nl=1))
+            >>> result = (ut.repr2(prop_list0, nl=1))
             >>> print(result)
             >>> #_debug, num_retries, read_extern = True, 1, True
             >>> prop_gen = table.get_row_data(tbl_rowids, colnames, eager=False)
