@@ -2791,7 +2791,6 @@ class SQLDatabaseController(object):
             column_list = [[ut.trunc_repr(col) for col in column] for column in column_list]
 
         csv_table = ut.make_csv_table(column_list, column_lbls, header, comma_repl=';')
-        csv_table = ub.ensure_unicode(csv_table)
         return csv_table
 
     def print_table_csv(db, tablename, exclude_columns=[], truncate=False):
