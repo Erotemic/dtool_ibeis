@@ -58,3 +58,4 @@ failed_doctests.txt
 DEPCACHE*/
 tmp.txt
 test_times.txt
+*.tar.gz

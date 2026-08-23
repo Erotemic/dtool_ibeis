@@ -1,1 +1,1 @@
-guitool_ibeis >= 2.2.0
+guitool_ibeis >= 2.2.0 ; sys_platform != 'win32' or python_version < '3.14'

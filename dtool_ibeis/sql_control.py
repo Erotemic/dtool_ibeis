@@ -7,6 +7,7 @@ sql files are created with reasonable permissions.
 from loguru import logger
 import os
 import re
+import shutil
 import parse
 import ubelt as ub
 import utool as ut
@@ -47,7 +48,7 @@ def _unpacker(results_):
 
 def tuplize(list_):
     """ Converts each scalar item in a list to a dimension-1 tuple """
-    tup_list = [item if ut.isiterable(item) else (item,) for item in list_]
+    tup_list = [item if ub.iterable(item) else (item,) for item in list_]
     return tup_list
 
 
@@ -159,9 +160,9 @@ class SQLExecutionContext(object):
         except lite.Error as ex:
             logger.info('Reporting SQLite Error')
             logger.info('params = ' + ut.repr2(params, truncate=not ut.VERBOSE))
-            ut.printex(ex, 'sql.Error', keys=['params'])
-            if hasattr(ex, 'message') and ex.message.find('probably unsupported type') > -1:
-                logger.info('ERR REPORT: given param types = ' + ut.repr2(ut.lmap(type, params)))
+            logger.exception('sql.Error' + ' | context={!r}', {'params': params})
+            if 'probably unsupported type' in str(ex):
+                logger.info('ERR REPORT: given param types = ' + ut.repr2(list(map(type, params))))
                 if context.tablename is None:
                     if context.operation_type.startswith('SELECT'):
                         tablename = ut.str_between(context.operation, 'FROM', 'WHERE').strip()
@@ -273,7 +274,7 @@ def sanitize_sql(db, tablename_, columns=None):
                 return column_
 
         columns = [_sanitize_sql_helper(column) for column in columns]
-        columns = [column for column in columns if columns is not None]
+        columns = [column for column in columns if column is not None]
 
         return tablename, columns
 
@@ -295,10 +296,10 @@ def dev_test_new_schema_version(dbname, sqldb_dpath, sqldb_fname,
             # with this set to false
             testing_force_fresh = True or ub.argflag('--force-fresh')
             # Work on a fresh schema copy when developing
-            dev_sqldb_fname = ut.augpath(sqldb_fname, '_develop_schema')
+            dev_sqldb_fname = ub.augpath(sqldb_fname, '_develop_schema')
             sqldb_fpath     = join(sqldb_dpath, sqldb_fname)
             dev_sqldb_fpath = join(sqldb_dpath, dev_sqldb_fname)
-            ut.copy(sqldb_fpath, dev_sqldb_fpath, overwrite=testing_force_fresh)
+            shutil.copy2(sqldb_fpath, dev_sqldb_fpath)
             # Set testing schema version
             #ibs.db_version_expected = '1.3.6'
             logger.info('[sql] TESTING NEW SQLDB VERSION: %r' % (version_next,))
@@ -604,7 +605,7 @@ class SQLDatabaseController(object):
         connection.execute('BEGIN EXCLUSIVE')
         # Assert the database file exists, and copy to backup path
         if exists(db.fpath):
-            ut.copy(db.fpath, backup_filepath)
+            shutil.copy2(db.fpath, backup_filepath)
         else:
             raise IOError('Could not backup the database as the URI does not exist: %r' % (uri, ))
         # Commit the transaction, releasing the lock
@@ -779,7 +780,7 @@ class SQLDatabaseController(object):
         # check which parameters are valid
         isvalid_list = [params is not None for params in params_list]
         # Check for duplicate inputs
-        isunique_list = ut.flag_unique_items(list(zip(*superkey_lists)))
+        isunique_list = ub.unique_flags(list(zip(*superkey_lists)))
         # Check to see if this already exists in the database
         #superkey_params_iter = list(zip(*superkey_lists))
         # get_rowid_from_superkey functions take each list separately here
@@ -801,12 +802,7 @@ class SQLDatabaseController(object):
             db._add(tblname, colnames, dirty_params, **kwargs)
         except Exception as ex:
             nInput = len(params_list)  # NOQA
-            ut.printex(ex, key_list=[
-                'dirty_params',
-                'needsadd_list',
-                'superkey_lists',
-                'nInput',
-                'rowid_list_'])
+            logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'dirty_params': dirty_params, 'needsadd_list': needsadd_list, 'superkey_lists': superkey_lists, 'nInput': nInput, 'rowid_list_': rowid_list_})
             raise
         # TODO: We should only have to preform a subset of adds here
         # (at the positions where rowid_list was None in the getter check)
@@ -998,7 +994,7 @@ class SQLDatabaseController(object):
             sortx = np.argsort(np.argsort(id_iter))
             results = list(ub.take(results, sortx))
             if kwargs.get('unpack_scalars', True):
-                results = ut.take_column(results, 0)
+                results = [row[0] for row in results]
             return results
         else:
             if id_iter is None:
@@ -1081,13 +1077,12 @@ class SQLDatabaseController(object):
                 assert not has_duplicates, "Passing a not-unique list of ids"
             except Exception as ex:
 
-                ut.printex(ex, 'len(id_list) = %r, len(set(id_list)) = %r' %
+                logger.exception('len(id_list) = %r, len(set(id_list)) = %r' %
                            (len(id_list), len(set(id_list))))
-                ut.print_traceback()
                 raise
         elif duplicate_behavior == 'filter':
             # Keep only the first setting of every row
-            isunique_list = ut.flag_unique_items(id_list)
+            isunique_list = ub.unique_flags(id_list)
             id_list  = list(ub.compress(id_list, isunique_list))
             val_list = list(ub.compress(val_list, isunique_list))
         else:
@@ -1101,7 +1096,7 @@ class SQLDatabaseController(object):
             num_id = len(id_list)
             assert num_val == num_id, 'list inputs have different lengths'
         except AssertionError as ex:
-            ut.printex(ex, key_list=['num_val', 'num_id'])
+            logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'num_val': num_val, 'num_id': num_id})
             raise
         fmtdict = {
             'tblname_str'  : tblname,
@@ -1190,7 +1185,7 @@ class SQLDatabaseController(object):
                 result_iter = context.execute_and_generate_results(params)
                 result_list = list(result_iter)
             except Exception as ex:
-                ut.printex(ex, key_list=[(str, 'operation'), 'params'])
+                logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'operation': operation, 'params': params})
                 raise
         return result_list
 
@@ -1362,7 +1357,7 @@ class SQLDatabaseController(object):
         assert len(vals) == 1, 'duplicate keys in metadata table'
         val = vals[0]
         if val is None:
-            if default == ut.NoParam:
+            if default == ub.NoParam:
                 assert val is not None, 'metadata_table key=%r does not exist' % (key,)
             else:
                 val = default
@@ -1376,7 +1371,7 @@ class SQLDatabaseController(object):
                 # mid level representations by default, for now flag it
                 val = eval(val, {}, {})
         except Exception as ex:
-            ut.printex(ex, keys=['key', 'val'])
+            logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'key': key, 'val': val})
             raise
         return val
 
@@ -1423,7 +1418,7 @@ class SQLDatabaseController(object):
             >>> operation = db._make_add_table_sqlstr(tablename, coldef_list)
             >>> print(operation)
         """
-        if len(coldef_list) == 0 or coldef_list is None:
+        if coldef_list is None or len(coldef_list) == 0:
             raise AssertionError('table %s is not given any columns' % (tablename,))
         bad_kwargs = set(metadata_keyval.keys()) - set(db.table_metadata_keys)
         assert len(bad_kwargs) == 0, (
@@ -1458,7 +1453,7 @@ class SQLDatabaseController(object):
                     constraint_list.append(unique_constraint)
                 constraint_list = ut.unique_ordered(constraint_list)
         except Exception as ex:
-            ut.printex(ex, keys=locals().keys())
+            logger.exception('Exception while processing dtool operation')
             raise
 
         # ASSERT VALID TYPES
@@ -1602,8 +1597,8 @@ class SQLDatabaseController(object):
             colmap_list += [(old_col, new_col, None, None)]
 
         coldef_list = db.get_coldef_list(tablename)
-        colname_list = ut.take_column(coldef_list, 0)
-        coltype_list = ut.take_column(coldef_list, 1)
+        colname_list = [row[0] for row in coldef_list]
+        coltype_list = [row[1] for row in coldef_list]
 
         colname_original_list = colname_list[:]
         colname_dict = {colname: colname for colname in colname_list}
@@ -1637,7 +1632,7 @@ class SQLDatabaseController(object):
                         'Unkown source colname=%s in tablename=%s' % (
                             src, tablename))
                 except AssertionError as ex:
-                    ut.printex(ex, keys=['colname_list'])
+                    logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'colname_list': colname_list})
                 index = colname_list.index(src)
                 if dst is None:
                     # Drop column
@@ -1950,7 +1945,7 @@ class SQLDatabaseController(object):
         #                     for column in column_list]
         autogen_dict = db.get_table_autogen_dict(tablename)
         coldef_list = autogen_dict['coldef_list']
-        max_colsize = max(32, 2 + max(map(len, ut.take_column(coldef_list, 0))))
+        max_colsize = max(32, 2 + max(map(len, [row[0] for row in coldef_list])))
         # for column, colname_repr in zip(column_list, colnamerepr_list):
         for col_name, col_type in coldef_list:
             name_part = ('%s,' % ut.repr2(col_name)).ljust(max_colsize)
@@ -1968,7 +1963,7 @@ class SQLDatabaseController(object):
                 return None
             import textwrap
             wraped_docstr = '\n'.join(textwrap.wrap(ut.textblock(docstr)))
-            indented_docstr = ut.indent(wraped_docstr.strip(), tab2)
+            indented_docstr = ub.indent(wraped_docstr.strip(), tab2)
             _TSQ = ut.TRIPLE_SINGLE_QUOTE
             quoted_docstr = _TSQ + '\n' + indented_docstr + '\n' + tab2 + _TSQ
             return quoted_docstr
@@ -1986,7 +1981,7 @@ class SQLDatabaseController(object):
         # FIXME: are we depricating dependsmap?
         dependsmap = db.get_metadata_val(tablename + '_dependsmap', eval_=True, default=None)
         if dependsmap is not None:
-            _dictstr = ut.indent(ut.repr2(dependsmap, nl=1), tab2)
+            _dictstr = ub.indent(ut.repr2(dependsmap, nl=1), tab2)
             depends_map_dictstr = ut.align(_dictstr.lstrip(' '), ':')
             # hack for formatting
             depends_map_dictstr = depends_map_dictstr.replace(tab1 + '}', '}')
@@ -2182,7 +2177,7 @@ class SQLDatabaseController(object):
     def get_column_names(db, tablename):
         """ Conveinience: Returns the sql tablename columns """
         column_list = db.get_columns(tablename)
-        column_names = ut.lmap(str, ut.take_column(column_list, 1))
+        column_names = list(map(str, [row[1] for row in column_list]))
         return column_names
 
     def get_column(db, tablename, name):
@@ -2240,7 +2235,8 @@ class SQLDatabaseController(object):
         """
         if columns is None:
             all_column_names = db.get_column_names(tablename)
-            column_names = ut.setdiff(all_column_names, exclude_columns)
+            exclude_columns_set = set(exclude_columns)
+            column_names = [name for name in all_column_names if name not in exclude_columns_set]
         else:
             column_names = columns
         if rowids is not None:
@@ -2452,16 +2448,21 @@ class SQLDatabaseController(object):
                                         raise NotImplementedError(
                                             'Cannot Handle: len(superkeys) == 0. '
                                             'Probably a degenerate case')
-                            except Exception as ex:
-                                ut.printex(ex, 'Error Getting superkey colnames',
-                                           keys=['tablename_', 'superkeys'])
+                            except Exception:
+                                logger.exception(
+                                    'Error getting superkey colnames for table={!r}',
+                                    tablename_,
+                                )
                                 raise
                             return superkey_colnames
                         try:
                             extern_superkey_colnames = get_standard_superkey_colnames(extern_tablename)
-                        except Exception as ex:
-                            ut.printex(ex, 'Error Building Transferdata',
-                                       keys=['tablename_', 'dependtup'])
+                        except Exception:
+                            logger.exception(
+                                'Error building transfer data for table={!r}, dependency={!r}',
+                                extern_tablename,
+                                dependtup,
+                            )
                             raise
                         # INFER SUPERKEY COLNAMES
                     colx = ut.listfind(column_names, colname)
@@ -2578,7 +2579,7 @@ class SQLDatabaseController(object):
                                 default=None)
             for tablename in tablename_list]
         dependency_digraph = {
-            tablename: [] if dependsmap is None else ut.get_list_column(dependsmap.values(), 0)
+            tablename: [] if dependsmap is None else [row[0] for row in dependsmap.values()]
             for dependsmap, tablename in zip(dependsmap_list, tablename_list)
         }
 
@@ -2679,7 +2680,7 @@ class SQLDatabaseController(object):
                     new_extern_rowids = db.get_rowid_from_superkey(
                         extern_tablename, _params_iter,
                         superkey_colnames=extern_superkey_colname)
-                    num_Nones = sum(ut.flag_None_items(new_extern_rowids))
+                    num_Nones = sum([item is None for item in new_extern_rowids])
                     if verbose:
                         logger.info('[sqlmerge] * there were %d none items' % (num_Nones,))
                     #ut.assert_all_not_None(new_extern_rowids)
@@ -2701,7 +2702,7 @@ class SQLDatabaseController(object):
                     for superkey_colnames in superkey_colnames_list
                 ]
             except Exception as ex:
-                ut.printex(ex, keys=['column_names_', 'superkey_colnames_list'])
+                logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'column_names_': column_names_, 'superkey_colnames_list': superkey_colnames_list})
                 raise
             if len(superkey_colnames_list) > 1:
                 # FIXME: Rectify duplicate code
@@ -2790,7 +2791,7 @@ class SQLDatabaseController(object):
             column_list = [[ut.trunc_repr(col) for col in column] for column in column_list]
 
         csv_table = ut.make_csv_table(column_list, column_lbls, header, comma_repl=';')
-        csv_table = ut.ensure_unicode(csv_table)
+        csv_table = ub.ensure_unicode(csv_table)
         return csv_table
 
     def print_table_csv(db, tablename, exclude_columns=[], truncate=False):
@@ -2852,7 +2853,7 @@ class SQLDatabaseController(object):
 
 
 # @six.add_metaclass(ut.ReloadingMetaclass)
-class SQLTable(ut.NiceRepr):
+class SQLTable(ub.NiceRepr):
     """
     convinience object for dealing with a specific table
 

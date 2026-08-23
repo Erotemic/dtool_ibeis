@@ -5,11 +5,12 @@ CommandLine:
     python -m dtool_ibeis.depcache_control --exec-make_graph --show
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
+import tempfile
+import ubelt as ub
 import utool as ut
 import numpy as np
 import uuid
-from os.path import join, dirname
-from six.moves import zip
+from os.path import join
 from dtool_ibeis import depcache_control
 import dtool_ibeis
 
@@ -190,7 +191,7 @@ class DummyAnnotMatch(dtool_ibeis.MatchResult):
     pass
 
 
-class DummyVsOneMatch(dtool_ibeis.AlgoResult, ut.NiceRepr):
+class DummyVsOneMatch(dtool_ibeis.AlgoResult, ub.NiceRepr):
     def __init__(self):
         self.score = None
         self.qaid = None
@@ -201,7 +202,7 @@ class DummyVsOneMatch(dtool_ibeis.AlgoResult, ut.NiceRepr):
         return ('(%d-vs-%d) %.2f' % (self.qaid, self.daid, self.score))
 
 
-def testdata_depc(fname=None):
+def testdata_depc(fname=None, cache_dpath=None):
     """
     Example of local registration
     """
@@ -211,17 +212,21 @@ def testdata_depc(fname=None):
     # imgkeys = ut.get_valid_test_imgkeys()
     imgkeys = ['airport', 'amazon', 'astro', 'carl', 'lowcontrast', 'paraview',
                'parrot', 'pm5644', 'stars', 'tsukuba_l', 'tsukuba_r']
-    gpath_list = ut.lmap(ut.grab_test_imgpath, imgkeys,
-                         verbose=False)
+    gpath_list = [
+        ut.grab_test_imgpath(imgkey, verbose=False)
+        for imgkey in imgkeys
+    ]
 
     dummy_root = 'dummy_annot'
 
     def get_root_uuid(aid_list):
-        return ut.lmap(ut.hashable_to_uuid, aid_list)
+        return list(map(ut.hashable_to_uuid, aid_list))
 
-    # put the test cache in the dtool_ibeis repo
-    dtool_repo = dirname(ut.get_module_dir(dtool_ibeis))
-    cache_dpath = join(dtool_repo, 'DEPCACHE')
+    # Keep mutable test databases isolated from installed packages and from
+    # other doctest invocations.  In particular, a shared site-packages cache
+    # can retain stale or invalid SQLite files between Windows CI jobs.
+    if cache_dpath is None:
+        cache_dpath = tempfile.mkdtemp(prefix='dtool_ibeis-depcache-')
 
     depc = dtool_ibeis.DependencyCache(
         root_tablename=dummy_root, default_fname=fname,
@@ -229,7 +234,6 @@ def testdata_depc(fname=None):
         get_root_uuid=get_root_uuid,
         #root_asobject=root_asobject,
         use_globals=False)
-
     @depc.register_preproc(tablename='chip', parents=[dummy_root],
                            colnames=['size', 'chip'],
                            coltypes=[(int, int), ('extern', vt.imread, vt.imwrite)],
@@ -368,7 +372,7 @@ def testdata_depc(fname=None):
             import vtool_ibeis as vt
             from plottool_ibeis import interact_impaint
             mask_dpath = join(depc.cache_dpath, 'ManualChipMask')
-            ut.ensuredir(mask_dpath)
+            ub.ensuredir(mask_dpath)
             if config is None:
                 config = {}
             print('Requesting user defined chip mask')
@@ -391,14 +395,14 @@ def testdata_depc(fname=None):
         @depc.register_preproc(
             'spam', ['fgweight', 'chip', 'keypoint'],
             ['spam', 'eggs', 'size', 'uuid', 'vector', 'textdata'],
-            [str, int, (int, int), uuid.UUID, np.ndarray, ('extern', ut.readfrom)],
+            [str, int, (int, int), uuid.UUID, np.ndarray, ('extern', ub.readfrom)],
             docstr='I dont like spam',)
         def dummy_preproc_spam(depc, *args, **kwargs):
             config = kwargs.get('config', None)
             if config is None:
                 config = {}
             print('[preproc] Computing spam')
-            ut.writeto('tmp.txt', ut.lorium_ipsum())
+            ub.writeto('tmp.txt', ut.lorium_ipsum())
             for x in zip(*args):
                 size = (42, 21)
                 uuid = ut.get_zero_uuid()

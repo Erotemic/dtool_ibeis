@@ -1,12 +1,12 @@
 """
 custom sqlite3 module that supports numpy types
 """
+from loguru import logger
 import sys
 import io
 import uuid
 import numpy as np
 import utool as ut
-ut.noinject(__name__, '[dtool_ibeis.__SQLITE__]')
 
 
 VERBOSE_SQL = '--veryverbose' in sys.argv or '--verbose' in sys.argv or '--verbsql' in sys.argv
@@ -15,7 +15,35 @@ TRY_NEW_SQLITE3 = False
 # SQL This should be the only file which imports sqlite3
 if not TRY_NEW_SQLITE3:
     from sqlite3 import Binary, register_adapter, register_converter  # NOQA
+    from sqlite3 import Connection as _SQLiteConnection
+    from sqlite3 import connect as _sqlite_connect
     from sqlite3 import *  # NOQA
+
+    class _DToolConnection(_SQLiteConnection):
+        """SQLite connection with a safe GC fallback for Python 3.13+."""
+
+        def __del__(self):
+            # Python 3.13 warns when an open sqlite3.Connection reaches object
+            # finalization. Dtool still closes owned controllers explicitly;
+            # this fallback covers legacy doctests and exception paths that let
+            # a connection fall out of scope first. If close is illegal (for
+            # example because of SQLite's same-thread rule), delegate back to
+            # sqlite3's own finalizer so the ResourceWarning remains visible.
+            try:
+                self.close()
+            except Exception:
+                base_del = getattr(super(), '__del__', None)
+                if base_del is not None:
+                    base_del()
+
+    def connect(*args, **kwargs):
+        """Open SQLite using dtool's GC-safe connection by default."""
+        # sqlite3.connect historically allowed ``factory`` as its sixth
+        # positional argument (database is first). Preserve callers that
+        # explicitly supply their own factory either positionally or by name.
+        if len(args) < 6 and 'factory' not in kwargs:
+            kwargs['factory'] = _DToolConnection
+        return _sqlite_connect(*args, **kwargs)
 
 #try:
 #    # Try to import the correct version of sqlite3
@@ -67,7 +95,7 @@ def REGISTER_SQLITE3_TYPES():
         try:
             return uuid.UUID(bytes_le=blob)
         except ValueError as ex:
-            ut.printex(ex, keys=['blob'])
+            logger.exception('Exception while processing dtool operation' + ' | context={!r}', {'blob': blob})
             raise
             print('WARNING: COULD NOT PARSE UUID %r, GIVING RANDOM' % (blob, ))
             input('continue... [enter]')

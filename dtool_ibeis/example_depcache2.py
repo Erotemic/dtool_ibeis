@@ -1,6 +1,16 @@
-import utool as ut
 import ubelt as ub
 import os
+
+
+def _ensure_iterable(value):
+    if isinstance(value, str):
+        return [value]
+    try:
+        iter(value)
+    except TypeError:
+        return [value]
+    else:
+        return value
 
 
 def depc_34_helper(depc):
@@ -16,10 +26,10 @@ def depc_34_helper(depc):
                 #print('p = %r' % (p,))
                 #print('row = %r' % (row,))
                 if not p.startswith(depc.root):
-                    native_cols = depc.get_native(p, ut.ensure_iterable(row))
+                    native_cols = depc.get_native(p, _ensure_iterable(row))
                     parent_data = '+'.join(['#'.join(col) for col in native_cols])
                 else:
-                    parent_data = 'root(' + ';'.join(list(map(str, ut.ensure_iterable(row)))) + ')'
+                    parent_data = 'root(' + ';'.join(list(map(str, _ensure_iterable(row)))) + ')'
                 data += [parent_data]
             d = '[' + '&'.join(data) + ']'
             retstr = tablename + '(' + d + ':' + str(param_val) + ')'
@@ -146,7 +156,7 @@ def testdata_depc4(in_memory=True):
 
     root = 'annot'
     depc = dtool_ibeis.DependencyCache(
-        root_tablename=root, get_root_uuid=ut.identity,
+        root_tablename=root, get_root_uuid=ub.identity,
         default_fname=default_fname,
         cache_dpath=cache_dpath, use_globals=False)
 

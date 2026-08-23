@@ -1,6 +1,8 @@
 """
 implicit version of dependency cache from ibeis/templates/template_generator
 """
+import functools
+import ubelt as ub
 from loguru import logger
 import utool as ut
 import numpy as np
@@ -68,7 +70,7 @@ def make_depcache_decors(root_tablename):
             return func
         return _wrapper
 
-    _depcdecors = ut.odict({
+    _depcdecors = ub.odict({
         'preproc': register_preproc,
         'subprop': register_subprop,
     })
@@ -106,9 +108,9 @@ class _CoreDependencyCache(object):
                 coltypes = np.ndarray
         # Check if just a single column is given
         if default_to_unpack is None:
-            if ut.isiterable(colnames):
+            if ub.iterable(colnames):
                 default_to_unpack = False
-                colnames = ut.lmap(str, colnames)
+                colnames = list(map(str, colnames))
             else:
                 colnames = [colnames]
                 coltypes = [coltypes]
@@ -182,7 +184,7 @@ class _CoreDependencyCache(object):
             for args_, _kwargs in reg_subprop:
                 depc._register_subprop(*args_, **_kwargs)
 
-        ut.ensuredir(depc.cache_dpath)
+        ub.ensuredir(depc.cache_dpath)
 
         # Memory filestore
         #if False:
@@ -197,9 +199,9 @@ class _CoreDependencyCache(object):
                 from os.path import dirname
                 prefix_dpath = dirname(fname_)
                 if prefix_dpath:
-                    ut.ensuredir(ut.unixjoin(depc.cache_dpath, prefix_dpath))
+                    ub.ensuredir(ut.unixjoin(depc.cache_dpath, prefix_dpath))
                 fpath = ut.unixjoin(depc.cache_dpath, fname_)
-            # if ut.get_argflag('--clear-all-depcache'):
+            # if ub.argflag('--clear-all-depcache'):
             #     ut.delete(fpath)
             db = sql_control.SQLDatabaseController(fpath=fpath,
                                                    always_check_metadata=False)
@@ -230,13 +232,13 @@ class _CoreDependencyCache(object):
             for dfmtstr, func in inject_patterns:
                 funcname = ut.get_funcname(func)
                 attrname = dfmtstr.format(tablename=table.tablename)
-                get_rowids = ut.partial(func, table.tablename)
+                get_rowids = functools.partial(func, table.tablename)
                 # Set flat version
                 setattr(d, attrname, get_rowids)
                 setattr(wobj, funcname, func)
             dfmtstr = 'get_{tablename}_{colname}'
             for colname in table.data_colnames:
-                get_prop = ut.partial(depc.get, table.tablename, colnames=colname)
+                get_prop = functools.partial(depc.get, table.tablename, colnames=colname)
                 attrname = dfmtstr.format(tablename=table.tablename, colname=colname)
                 # Set flat version
                 setattr(d, attrname, get_prop)
@@ -272,7 +274,7 @@ class _CoreDependencyCache(object):
                 'tablename=%r does not exist' % (tablename,))
             root = depc.root_tablename
             children_, parents_ = list(zip(*depc.get_edges()))
-            child_to_parents = ut.group_items(children_, parents_)
+            child_to_parents = ub.group_items(children_, parents_)
             if ut.VERYVERBOSE:
                 logger.info('root = %r' % (root,))
                 logger.info('tablename = %r' % (tablename,))
@@ -284,11 +286,10 @@ class _CoreDependencyCache(object):
             dependency_levels_ = ut.get_levels(from_root)
             dependency_levels = ut.longest_levels(dependency_levels_)
             dependency_levels = list(map(sorted, dependency_levels))
-        except Exception as ex:
-            ut.printex(ex, 'error getting dependencies',
-                       keys=['tablename', 'root', 'children_to_parents',
-                             'to_root', 'from_root', 'dependency_levels_',
-                             'dependency_levels', ])
+        except Exception:
+            logger.exception(
+                'error getting dependencies for tablename={!r}', tablename
+            )
             raise
 
         return dependency_levels
@@ -367,7 +368,7 @@ class _CoreDependencyCache(object):
                 if len(input_tuple_) == 0:
                     input_tuple_ = []
                 elif len(input_tuple_) > 1:
-                    if not ut.isiterable(input_tuple_[0]):
+                    if not ub.iterable(input_tuple_[0]):
                         input_tuple_ = (input_tuple_,)
         if len(exi_inputs) != len(input_tuple_):
             msg = '#expected=%d, #got=%d' % (len(exi_inputs), len(input_tuple_))
@@ -377,7 +378,7 @@ class _CoreDependencyCache(object):
         rectified_input = []
         for x, d in zip(input_tuple_, exi_inputs.expected_input_depth()):
             if d == 0:
-                if not ut.isiterable(x):
+                if not ub.iterable(x):
                     rectified_input.append([x])
                 else:
                     rectified_input.append(x)
@@ -460,9 +461,8 @@ class _CoreDependencyCache(object):
 
             for count, (input_nodes, output_node) in enumerate(compute_edges, start=1):
                 if _debug:
-                    ut.cprint(' * COMPUTING %d/%d EDGE %r -- %r' % (
-                        count, len(compute_edges), input_nodes, output_node),
-                        'blue')
+                    logger.debug(' * COMPUTING {}/{} EDGE {!r} -- {!r}',
+                                 count, len(compute_edges), input_nodes, output_node)
                 tablekey = output_node.tablename
                 table = depc[tablekey]
                 input_nodes_ = input_nodes
@@ -480,7 +480,7 @@ class _CoreDependencyCache(object):
                 # argsT = [... (pid_{1,j}, ... pid_{N,j}) ...]
                 # i = row, j = col
                 sig_multi_flags = table.get_parent_col_attr('ismulti')
-                parent_rowidsT = ut.take(rowid_dict, input_nodes_)
+                parent_rowidsT = list(ub.take(rowid_dict, input_nodes_))
                 parent_rowids_  = []
                 # TODO: will need to figure out which columns to zip and which
                 # columns to product (ie take product over ones that have 1
@@ -519,7 +519,7 @@ class _CoreDependencyCache(object):
                              for ids_ in _parent_rowids], strvals=True))))
 
                 if _debug:
-                    ut.cprint('-------------', 'blue')
+                    logger.debug('-------------')
                 if output_node.tablename != target_tablename:
                     # Get table configuration
                     config_ = depc._ensure_config(tablekey, config, _debug)
@@ -544,7 +544,7 @@ class _CoreDependencyCache(object):
         """
         existing_rowids = depc.get_rowids(tablename, input_tuple,
                                           config=config, ensure=False)
-        flags = ut.flag_not_None_items(existing_rowids)
+        flags = [item is not None for item in existing_rowids]
         return flags
 
     def get_rowids(depc, tablename, input_tuple, **rowid_kw):
@@ -732,7 +732,7 @@ class _CoreDependencyCache(object):
                     logger.info(' * (ensured) config_ = %r' % (config_,))
                 table = depc[tablename]
                 extern_dpath = table.extern_dpath
-                ut.ensuredir(extern_dpath, verbose=False or table.depc._debug)
+                ub.ensuredir(extern_dpath, verbose=False or table.depc._debug)
                 fname_list = table.get_extern_fnames(parent_rowids,
                                                      config=config_,
                                                      extern_col_index=0)
@@ -939,7 +939,7 @@ class _CoreDependencyCache(object):
 
 
 # , metaclass=ut.ReloadingMetaclass
-class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
+class DependencyCache(_CoreDependencyCache, ub.NiceRepr):
     """
     Currently, to use this class a user must:
         * on root modification, call depc.on_root_modified
@@ -976,10 +976,10 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
         if get_root_uuid is None:
             logger.info('WARNING NEED UUID FUNCTION')
             # HACK
-            get_root_uuid = ut.identity
+            get_root_uuid = ub.identity
         depc.get_root_uuid = get_root_uuid
         depc.delete_exclude_tables = {}
-        depc._debug = ut.get_argflag(('--debug-depcache', '--debug-depc'))
+        depc._debug = ub.argflag(('--debug-depcache', '--debug-depc'))
 
     def get_tablenames(depc):
         return list(depc.cachetable_dict.keys())
@@ -1072,13 +1072,13 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
         # add implicit edges
         implicit_edges = []
         # Map config classes to tablenames
-        _inverted_ccdict = ut.invert_dict(depc.configclass_dict)
+        _inverted_ccdict = ub.invert_dict(depc.configclass_dict)
         for tablename2, configclass in depc.configclass_dict.items():
             cfg = configclass()
             subconfigs = cfg.get_sub_config_list()
             if subconfigs is not None and len(subconfigs) > 0:
-                tablename1_list = ut.dict_take(_inverted_ccdict, subconfigs, None)
-                for tablename1 in ut.filter_Nones(tablename1_list):
+                tablename1_list = [_inverted_ccdict.get(key, None) for key in subconfigs]
+                for tablename1 in [item for item in tablename1_list if item is not None]:
                     implicit_edges.append((tablename1, tablename2))
         if data:
             implicit_edges = [(e1, e2, {'implicit': True})
@@ -1109,7 +1109,7 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
             >>> from dtool_ibeis.example_depcache import testdata_depc
             >>> import utool as ut
             >>> depc = testdata_depc()
-            >>> graph = depc.make_graph(reduced=ut.get_argflag('--reduced'))
+            >>> graph = depc.make_graph(reduced=ub.argflag('--reduced'))
             >>> ut.quit_if_noshow()
             >>> import plottool_ibeis as pt
             >>> pt.ensureqt()
@@ -1221,7 +1221,7 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
                     # if there is an implicit incoming edge
                     implicit_flags = [edge[2].get('implicit') for edge in in_edges]
                     explicit_flags = ut.not_list(implicit_flags)
-                    implicit_edges = ut.compress(in_edges, implicit_flags)
+                    implicit_edges = list(ub.compress(in_edges, implicit_flags))
                     flag = True
                     for edge in implicit_edges:
                         # Ignore this edge if there is a common descendant
@@ -1232,10 +1232,10 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
 
                     if flag and any(implicit_edges):
                         # then remove all non-implicit incoming edges
-                        remove_non_implicit = ut.compress(in_edges, explicit_flags)
+                        remove_non_implicit = list(ub.compress(in_edges, explicit_flags))
                         # remember this nodes removed in edges
                         removed_in_edges[node] = remove_non_implicit
-                to_remove2 = ut.take_column(ut.flatten(removed_in_edges.values()), [0, 1])
+                to_remove2 = [[row[col] for col in [0, 1]] for row in list(ub.flatten(removed_in_edges.values()))]
                 nonmulti_graph.remove_edges_from(to_remove2)
 
             graph_tr = ut.nx_transitive_reduction(nonmulti_graph)
@@ -1267,12 +1267,12 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
                 pass
                 graph_tr.add_edges_from(multi_data_edges)
 
-            parents = ut.ddict(list)
+            parents = ub.ddict(list)
             for u, v, data in graph.edges(data=True):
                 parents[v].append(u)
 
             for node, ps in parents.items():
-                num_connect = ut.dict_hist(ps)
+                num_connect = ub.dict_hist(ps)
                 nwise_parents = [(k, v) for k, v in num_connect.items() if v > 1]
 
                 for p, n in nwise_parents:
@@ -1385,10 +1385,10 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
         rowid_dict[root] = root_rowids
 
         # Find all rowids that inherit from the specific root rowids
-        sinks = list(ut.nx_sink_nodes(nx.bfs_tree(graph, depc.root)))
+        sinks = list((node for node, degree in nx.bfs_tree(graph, depc.root).out_degree() if degree == 0))
         for target_tablename in sinks:
             path = nx.shortest_path(graph, root, target_tablename)
-            for parent, child in ut.itertwo(path):
+            for parent, child in zip(path, path[1:]):
                 child_table = depc[child]
                 relevant_col_attrs = [attrs for attrs in child_table.parent_col_attrs
                                       if attrs['parent_table'] == parent]
@@ -1408,16 +1408,16 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
                             # If a config filter is specified only grab rows that
                             # meed the filter
                             tbl_cfgids = child_table.get_row_cfgid(child_rowids)
-                            cfgid2_rowids = ut.group_items(child_rowids, tbl_cfgids)
+                            cfgid2_rowids = ub.group_items(child_rowids, tbl_cfgids)
                             unique_cfgids = cfgid2_rowids.keys()
-                            unique_cfgids = ut.filter_Nones(unique_cfgids)
+                            unique_cfgids = [item for item in unique_cfgids if item is not None]
                             unique_configs = child_table.get_config_from_rowid(unique_cfgids)
                             passed_rowids = []
                             for config, cfgid in zip(unique_configs, tbl_cfgids):
                                 if all([config[key] == val for key, val in config_filter.items()]):
                                     passed_rowids.extend(cfgid2_rowids[cfgid])
                             child_rowids = passed_rowids
-                    rowid_dict[child] = ut.unique(child_rowids + rowid_dict.get(child, []))
+                    rowid_dict[child] = list(ub.unique(child_rowids + rowid_dict.get(child, [])))
         return rowid_dict
 
     def notify_root_changed(depc, root_rowids, prop, force_delete=False):
@@ -1456,7 +1456,7 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
             >>> info_props = ['image_uuid', 'verts', 'theta']
             >>> info_props = ['image_uuid', 'verts', 'theta', 'name', 'species', 'yaw']
         """
-        getters = ut.dict_take(depc.root_getters, info_props)
+        getters = [depc.root_getters[key] for key in info_props]
         infotup_list = zip(*[getter(root_rowids) for getter in getters])
         info_uuid_list = [ut.augment_uuid(*tup) for tup in infotup_list]
         return info_uuid_list
@@ -1496,7 +1496,10 @@ class DependencyCache(_CoreDependencyCache, ut.NiceRepr):
         if source is None:
             source = depc.root
         graph = depc.make_graph(implicit=True)
-        requires_tables = ut.setdiff(ut.nx_all_nodes_between(graph, source, dest), [source])
+        requires_tables = [
+            node for node in ut.nx_all_nodes_between(graph, source, dest)
+            if node != source
+        ]
         #requires_tables = ut.setdiff(ut.nx_all_nodes_between(depc.graph, 'annotations', 'featweight'), ['annotations'])
         requires_tables = ut.nx_topsort_nodes(depc.graph, requires_tables)
         requires_configs = [depc.configclass_dict[tblname](**config)
